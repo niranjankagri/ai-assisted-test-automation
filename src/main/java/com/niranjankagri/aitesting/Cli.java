@@ -26,7 +26,7 @@ import java.util.List;
  *   ai generate --open              draft every test case that has no test yet
  *   ai generate --approved          redo the approved AI tests (CI: from recordings)
  *   ai gate TC-103                  re-run the gate on a draft you edited
- *   ai approve TC-103 Your Name   move a passed draft into src/test with @AiDrafted
+ *   ai approve TC-103 Your Name     move a passed draft into src/test with @AiDrafted
  *   ai triage                       Claude triages the failures of the last UI run
  * </pre>
  */
@@ -156,7 +156,7 @@ public final class Cli {
                   generate --open               draft every test case that has no test yet
                   generate --approved           redo the approved AI tests (CI does this from recordings)
                   gate TC-103                   re-run the gate on a draft you edited
-                  approve TC-103 Your Name    move a passed draft into src/test with @AiDrafted
+                  approve TC-103 Your Name      move a passed draft into src/test with @AiDrafted
                   triage                        Claude triages the failures of the last UI run
                 Live mode needs ANTHROPIC_API_KEY; without it, recorded answers are replayed.""");
         return 0;

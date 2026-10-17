@@ -303,12 +303,4 @@ public final class AiGateway {
             throw new IllegalStateException(e);
         }
     }
-
-    public static String sha256(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
-    }
 }

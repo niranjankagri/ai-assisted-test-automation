@@ -255,7 +255,7 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
-    /** Stand-alone start for manual exploring: `mvn -q exec:java -Dexec.args="app"`. */
+    /** Stand-alone start for manual exploring: `ai app` (see Cli). */
     public static void runForever(int port, boolean overlapBug) throws IOException, InterruptedException {
         try (LeaveDeskServer app = start(port, overlapBug)) {
             System.out.println("LeaveDesk running at " + app.baseUrl()

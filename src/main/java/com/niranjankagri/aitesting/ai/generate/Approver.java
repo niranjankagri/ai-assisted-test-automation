@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.regex.Matcher;
 
 /**
  * The human step: a reviewer approves a draft, and only then it moves into src/test, marked with
@@ -66,7 +67,7 @@ public final class Approver {
         // "package ...;" + blank line, then our import ahead of the draft's own imports.
         String withImport = source.replaceFirst("(?m)^(package [\\w.]+;\\R\\R)",
                 "$1import com.niranjankagri.aitesting.framework.AiDrafted;\n");
-        return withImport.replaceFirst("(?m)^public class ", annotation + "public class ");
+        return withImport.replaceFirst("(?m)^public class ", Matcher.quoteReplacement(annotation) + "public class ");
     }
 
     /** The coverage list from review.md, so the rule "coverage lists every expected result" can rerun. */

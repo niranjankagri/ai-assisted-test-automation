@@ -17,7 +17,7 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Which TestNG suite `mvn test` runs: unit (no browser, default), ui, or all -->
+        <!-- Which TestNG suite `mvn test` runs: unit (default: app and tooling tests) or ui (browser tests) -->
         <suite>unit</suite>
         <!-- Arguments for the CLI: mvnw test-compile exec:exec@ai -Dcli="generate TC-103" -->
         <cli>help</cli>
