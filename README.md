@@ -61,6 +61,11 @@ checks it, and nothing reaches `src/test` without a named reviewer.
 | Triage | `ai/triage` | Reads `target/test-evidence/*`, asks for a verdict with evidence and a bug ticket, writes `target/ai-triage/triage.md`. |
 | Prompts | `src/main/resources/prompts/*.md` | Reviewed like code; part of every recording's key. |
 
+**Why the app is in this repository:** the tests run against their own copy, started fresh for every run, locally and in
+CI. No shared or hosted environment means no outages, no test data shared between runs, and no change somewhere else
+that breaks these tests; one clone and one command run everything. It is also built for this framework: an overlap rule
+with a switchable bug for the failure-triage demo.
+
 ## Run it (Windows cmd)
 
 Needs JDK 21+ (the Maven wrapper downloads Maven). First time only, install the browsers:
