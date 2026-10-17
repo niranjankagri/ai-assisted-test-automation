@@ -16,6 +16,10 @@ and the tests (Playwright for Java + TestNG).
 
 ## The idea in one picture
 
+![Pipeline: test case, Claude drafts, quality gate, review and approve; failed runs go to AI triage](docs/images/pipeline.png)
+
+The same flow in text:
+
 ```text
  test-cases/TC-103.md            Claude Opus 5.5                    Quality gate (no AI)
  (plain language, like a   ──►   drafts a Playwright test   ──►    1. rules: page objects only, no sleeps,
