@@ -15,10 +15,12 @@
     <name>AI-assisted test automation (Java, Playwright, Claude)</name>
 
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Which TestNG suite `mvn test` runs: unit (no browser, default), ui, or all -->
         <suite>unit</suite>
+        <!-- Arguments for the CLI: mvnw test-compile exec:exec -Dcli="generate TC-103" -->
+        <cli>help</cli>
     </properties>
 
     <dependencies>
@@ -72,14 +74,18 @@
                     </suiteXmlFiles>
                 </configuration>
             </plugin>
-            <!-- `mvn exec:java -Dexec.args="..."` runs the CLI (app, generate, approve, triage) -->
+            <!--
+              The CLI (ai.cmd / ai.sh call this). exec:exec starts a separate JVM with the test classpath
+              on -classpath, because the quality gate compiles drafts against java.class.path.
+            -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.6.4</version>
                 <configuration>
-                    <mainClass>com.niranjankagri.aitesting.Cli</mainClass>
+                    <executable>java</executable>
                     <classpathScope>test</classpathScope>
+                    <commandlineArgs>-classpath %classpath com.niranjankagri.aitesting.Cli ${cli}</commandlineArgs>
                 </configuration>
             </plugin>
         </plugins>

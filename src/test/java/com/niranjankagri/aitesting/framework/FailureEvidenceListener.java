@@ -16,19 +16,24 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Saves the evidence of every failed UI test into target/test-evidence/&lt;Class&gt;.&lt;method&gt;/:
+ * Saves the evidence of every failed UI test into target/test-evidence/&lt;Class&gt;.&lt;method&gt;/
+ * (the quality gate points {@code -Devidence.dir} elsewhere for its own runs):
  * failure.json (test case id, error, stack, URL, console lines), screenshot.png, page.html and,
  * from {@link BaseUiTest}, trace.zip. The AI triage step reads exactly these files, so a person
  * and Claude look at the same evidence.
  */
 public class FailureEvidenceListener implements ITestListener {
 
-    public static final Path EVIDENCE_ROOT = Path.of("target", "test-evidence");
+    /** Evidence root: target/test-evidence unless the system property evidence.dir says otherwise. */
+    public static Path root() {
+        return Path.of(System.getProperty("evidence.dir", "target/test-evidence"));
+    }
+
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     /** The evidence folder of one test result (created if missing). */
     public static Path folderFor(ITestResult result) {
-        Path dir = EVIDENCE_ROOT.resolve(result.getTestClass().getRealClass().getSimpleName()
+        Path dir = root().resolve(result.getTestClass().getRealClass().getSimpleName()
                 + "." + result.getMethod().getMethodName());
         try {
             return Files.createDirectories(dir);

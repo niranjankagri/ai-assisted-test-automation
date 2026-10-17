@@ -1,9 +1,14 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
-<!-- No browser, no network: the app's own tests and the AI tooling's unit tests. `mvn test` runs this. -->
+<!--
+  No API key needed: the app's own tests and the AI tooling's tests. `mvnw test` runs this.
+  QualityGateRunTest starts Chromium (it runs hand-made drafts through the real gate); every other
+  test here is plain Java.
+-->
 <suite name="Unit">
     <test name="App and tooling">
         <packages>
             <package name="com.niranjankagri.aitesting.app"/>
+            <package name="com.niranjankagri.aitesting.tooling"/>
         </packages>
     </test>
 </suite>
