@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeaveDesk</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Every element a test touches has a data-testid; the page objects use only those. -->
+  <header class="topbar">
+    <span class="brand">LeaveDesk</span>
+    <span id="whoami" data-testid="current-user" hidden></span>
+    <button id="logout" data-testid="logout" hidden>Log out</button>
+  </header>
+
+  <main>
+    <section id="login-view" data-testid="login-view">
+      <h1>Sign in</h1>
+      <form id="login-form" novalidate>
+        <label>Username <input id="username" data-testid="username" autocomplete="username"></label>
+        <label>Password <input id="password" data-testid="password" type="password" autocomplete="current-password"></label>
+        <button type="submit" data-testid="login-submit">Sign in</button>
+        <p class="error" data-testid="login-error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="dashboard-view" data-testid="dashboard-view" hidden>
+      <div class="balance">Annual leave left: <strong data-testid="annual-remaining"></strong> days</div>
+
+      <form id="leave-form" data-testid="leave-form" novalidate>
+        <h2>New request</h2>
+        <label>Type
+          <select id="leave-type" data-testid="leave-type">
+            <option value="ANNUAL">Annual</option>
+            <option value="SICK">Sick</option>
+            <option value="UNPAID">Unpaid</option>
+          </select>
+        </label>
+        <label>From <input id="leave-from" data-testid="leave-from" type="date"></label>
+        <label>To <input id="leave-to" data-testid="leave-to" type="date"></label>
+        <label>Reason <input id="leave-reason" data-testid="leave-reason" maxlength="200"></label>
+        <button type="submit" data-testid="leave-submit">Submit request</button>
+        <p class="error" data-testid="leave-error" role="alert" hidden></p>
+        <p class="success" data-testid="leave-success" role="status" hidden></p>
+      </form>
+
+      <h2 id="list-title">Requests</h2>
+      <table aria-labelledby="list-title">
+        <thead>
+          <tr><th>#</th><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody data-testid="leave-rows"></tbody>
+      </table>
+      <p data-testid="empty-list" hidden>No requests yet.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

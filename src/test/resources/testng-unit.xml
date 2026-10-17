@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- No browser, no network: the app's own tests and the AI tooling's unit tests. `mvn test` runs this. -->
+<suite name="Unit">
+    <test name="App and tooling">
+        <packages>
+            <package name="com.niranjankagri.aitesting.app"/>
+        </packages>
+    </test>
+</suite>
