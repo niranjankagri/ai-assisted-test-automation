@@ -1,0 +1,57 @@
+# CI: app + tooling tests, the UI suite on three browsers, and the AI pipeline replayed from recordings.
+# No job needs an API key: generation and triage run in replay mode (answers recorded locally with a key).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: App + AI tooling tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install Chromium (the gate's own tests run drafts in a browser)
+        run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium"
+      - name: Unit suite (app rules, API, gate rules, gate runs, gateway replay)
+        run: ./mvnw -B test
+
+  ui:
+    name: UI tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install ${{ matrix.browser }}
+        run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps ${{ matrix.browser }}"
+      - name: Hand-written and approved AI-drafted tests
+        run: ./mvnw -B test -Dsuite=ui -Dbrowser=${{ matrix.browser }}
+      - name: Keep the evidence of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-evidence-${{ matrix.browser }}
+          path: target/test-evidence/
