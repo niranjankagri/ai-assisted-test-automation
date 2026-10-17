@@ -24,6 +24,7 @@ import java.util.List;
  *   ai status                       which test cases are automated, drafted or open
  *   ai generate TC-103 [TC-104 ...] Claude drafts tests; the quality gate checks them
  *   ai generate --open              draft every test case that has no test yet
+ *   ai generate --approved          redo the approved AI tests (CI: from recordings)
  *   ai gate TC-103                  re-run the gate on a draft you edited
  *   ai approve TC-103 Your Name   move a passed draft into src/test with @AiDrafted
  *   ai triage                       Claude triages the failures of the last UI run
@@ -69,6 +70,11 @@ public final class Cli {
         if (ids.remove("--open")) {
             List<String> automated = ProjectFiles.automatedTestCaseIds();
             ProjectFiles.allTestCaseIds().stream().filter(id -> !automated.contains(id)).forEach(ids::add);
+        }
+        if (ids.remove("--approved")) {
+            // Regenerate the approved AI tests from their recordings: proves in CI that the recorded
+            // answers still pass today's gate (and that nothing changed the prompt or its inputs).
+            ids.addAll(ProjectFiles.approvedAiTestCaseIds());
         }
         if (ids.isEmpty()) {
             System.out.println("Name the test cases: ai generate TC-103 [TC-104 ...] or ai generate --open");
@@ -148,6 +154,7 @@ public final class Cli {
                   status                        which test cases are automated, drafted or open
                   generate TC-103 [TC-104 ...]  Claude drafts tests, the quality gate checks them
                   generate --open               draft every test case that has no test yet
+                  generate --approved           redo the approved AI tests (CI does this from recordings)
                   gate TC-103                   re-run the gate on a draft you edited
                   approve TC-103 Your Name    move a passed draft into src/test with @AiDrafted
                   triage                        Claude triages the failures of the last UI run

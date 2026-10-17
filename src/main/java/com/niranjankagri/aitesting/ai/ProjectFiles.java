@@ -90,6 +90,23 @@ public final class ProjectFiles {
         }
     }
 
+    /** Test case ids of the approved AI tests in src/test (CI regenerates these from recordings). */
+    public static List<String> approvedAiTestCaseIds() {
+        if (!Files.isDirectory(AI_TESTS)) {
+            return List.of();
+        }
+        Pattern annotation = Pattern.compile("@TestCase\\(\"(TC-\\d+)\"\\)");
+        try (Stream<Path> files = Files.list(AI_TESTS)) {
+            return files.filter(p -> p.toString().endsWith(".java"))
+                    .flatMap(p -> annotation.matcher(read(p)).results().map(r -> r.group(1)))
+                    .distinct()
+                    .sorted()
+                    .toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     /** Finds the source file of a test class by its fully qualified name. */
     public static Path sourceOf(String className) {
         return TEST_SOURCES.resolve(className.replace('.', '/') + ".java");

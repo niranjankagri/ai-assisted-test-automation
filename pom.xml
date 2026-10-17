@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Which TestNG suite `mvn test` runs: unit (no browser, default), ui, or all -->
         <suite>unit</suite>
-        <!-- Arguments for the CLI: mvnw test-compile exec:exec -Dcli="generate TC-103" -->
+        <!-- Arguments for the CLI: mvnw test-compile exec:exec@ai -Dcli="generate TC-103" -->
         <cli>help</cli>
     </properties>
 
@@ -82,11 +82,20 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.6.4</version>
-                <configuration>
-                    <executable>java</executable>
-                    <classpathScope>test</classpathScope>
-                    <commandlineArgs>-classpath %classpath com.niranjankagri.aitesting.Cli ${cli}</commandlineArgs>
-                </configuration>
+                <executions>
+                    <!--
+                      Own execution id (exec:exec@ai) so this configuration does not leak into other exec
+                      calls, such as CI's `exec:java` that installs the Playwright browsers.
+                    -->
+                    <execution>
+                        <id>ai</id>
+                        <configuration>
+                            <executable>java</executable>
+                            <classpathScope>test</classpathScope>
+                            <commandlineArgs>-classpath %classpath com.niranjankagri.aitesting.Cli ${cli}</commandlineArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
