@@ -129,6 +129,13 @@ No CI job needs an API key.
 - **Sequential UI suite.** Every test resets the one in-JVM app, and a Playwright instance must not be shared between
   threads. The suite takes seconds.
 
+## Interview guide
+
+[docs/interview-questions.md](docs/interview-questions.md) ([PDF](docs/interview-questions.pdf), 13 pages):
+82 questions on LLM basics for testers, where AI helps in testing, generating tests with guardrails, prompting,
+review and risk, failure triage, and reproducibility and cost, each answered with a pointer into this repo.
+The design reasoning is in [docs/framework-design.md](docs/framework-design.md).
+
 ## Limitations
 
 - The rule stage is text matching; a determined author could get around it. Review stays mandatory.
