@@ -55,3 +55,79 @@ jobs:
         with:
           name: test-evidence-${{ matrix.browser }}
           path: target/test-evidence/
+
+  ai-replay:
+    name: AI drafts replayed through today's gate
+    # Once answers are recorded (locally, with a key): regenerates every approved AI test from its
+    # recording and runs the full quality gate on it. If a prompt, the framework code or a test case
+    # changed since recording, replay finds no matching recording and the job says what to re-record.
+    runs-on: ubuntu-latest
+    env:
+      AI_MODE: replay
+    steps:
+      - uses: actions/checkout@v7
+      # A job-level `if` cannot use hashFiles(), so a first step decides and the rest follow it.
+      - name: Recordings present?
+        id: rec
+        run: |
+          if ls ai/recordings/generate/*.json >/dev/null 2>&1; then echo "have=true" >> "$GITHUB_OUTPUT"
+          else echo "have=false" >> "$GITHUB_OUTPUT"; echo "No generate recordings yet: nothing to replay." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/setup-java@v6
+        if: steps.rec.outputs.have == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install Chromium
+        if: steps.rec.outputs.have == 'true'
+        run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium"
+      - name: Regenerate approved AI tests from recordings and gate them
+        if: steps.rec.outputs.have == 'true'
+        run: ./ai.sh generate --approved
+      - name: Review files to the job summary
+        if: always() && steps.rec.outputs.have == 'true'
+        run: cat ai-drafts/*/review.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+  triage-demo:
+    name: AI triage of a planted product bug
+    # Starts LeaveDesk with the overlap rule switched off, so the overlap test fails, then replays
+    # Claude's triage of that failure. The job passes only if the verdict is PRODUCT_BUG.
+    runs-on: ubuntu-latest
+    env:
+      AI_MODE: replay
+    steps:
+      - uses: actions/checkout@v7
+      # A job-level `if` cannot use hashFiles(), so a first step decides and the rest follow it.
+      - name: Recordings present?
+        id: rec
+        run: |
+          if ls ai/recordings/triage/*.json >/dev/null 2>&1; then echo "have=true" >> "$GITHUB_OUTPUT"
+          else echo "have=false" >> "$GITHUB_OUTPUT"; echo "No triage recordings yet: nothing to replay." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/setup-java@v6
+        if: steps.rec.outputs.have == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install Chromium
+        if: steps.rec.outputs.have == 'true'
+        run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium"
+      - name: UI suite against the app with the planted bug (failures expected)
+        if: steps.rec.outputs.have == 'true'
+        run: ./mvnw -B test -Dsuite=ui -Dleavedesk.bug=true || echo "Failures expected (the bug is planted)"
+      - name: AI triage (replayed)
+        if: steps.rec.outputs.have == 'true'
+        run: ./ai.sh triage
+      - name: Verdict must be PRODUCT_BUG
+        if: steps.rec.outputs.have == 'true'
+        run: |
+          cat target/ai-triage/triage.md >> "$GITHUB_STEP_SUMMARY"
+          grep -q '\*\*PRODUCT_BUG\*\*' target/ai-triage/triage.md
+      - name: Keep evidence and triage
+        if: always() && steps.rec.outputs.have == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: triage-demo
+          path: |
+            target/test-evidence/
+            target/ai-triage/
