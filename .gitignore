@@ -1,0 +1,16 @@
+# Build output
+target/
+
+# AI drafts are reviewed before they move into src/test; the draft folder itself is local
+ai-drafts/
+
+# Local secrets (the API key is read from the environment, never from a file in the repo)
+.env
+
+# Logs
+*.log
+
+# IDE settings
+.idea/
+.vscode/
+*.iml
