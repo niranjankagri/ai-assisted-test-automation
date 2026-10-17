@@ -1,0 +1,14 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!--
+  Browser tests: hand-written ones and AI-drafted ones that a person approved.
+  Run: mvnw test -Dsuite=ui   (add -Dheadless=false to watch, -Dbrowser=firefox to switch engines)
+  Sequential on purpose: every test resets the one shared app, and a Playwright instance must not be
+  shared between threads. The whole suite takes seconds, so parallel runs would buy little.
+-->
+<suite name="UI">
+    <test name="LeaveDesk UI">
+        <packages>
+            <package name="com.niranjankagri.aitesting.tests.*"/>
+        </packages>
+    </test>
+</suite>
