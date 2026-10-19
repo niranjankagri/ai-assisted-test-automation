@@ -23,6 +23,23 @@
         <cli>help</cli>
     </properties>
 
+    <!--
+      Every Jackson module on one patched version. The Anthropic SDK brings in 2.19.4, which has
+      known jackson-databind vulnerabilities (fixed in 2.21.7); the BOM lifts core, annotations,
+      databind and the SDK's datatype modules together so they never mix versions.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>2.21.7</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Official Anthropic Java SDK: the only way the tooling talks to Claude -->
         <dependency>
@@ -31,13 +48,12 @@
             <version>2.73.0</version>
         </dependency>
         <!--
-          JSON for the demo app and the AI tooling. Same version the Anthropic SDK brings in, declared
-          because this code uses it directly.
+          JSON for the demo app and the AI tooling, declared because this code uses it directly.
+          The version comes from the Jackson BOM above.
         -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>2.19.4</version>
         </dependency>
         <!-- Playwright for Java: the tests drive the browser with it, and the quality gate runs drafts with it -->
         <dependency>
