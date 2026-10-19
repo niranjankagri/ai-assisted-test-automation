@@ -1,5 +1,6 @@
 # CI: app + tooling tests, the UI suite on three browsers, and the AI pipeline replayed from recordings.
-# No job needs an API key: generation and triage run in replay mode (answers recorded locally with a key).
+# No job needs an API key: generation and triage run in replay mode (answers recorded locally with a key)
+# or, in the sample job, on hand-written sample answers that are labelled as such in every report.
 name: CI
 
 on:
@@ -129,5 +130,49 @@ jobs:
         with:
           name: triage-demo
           path: |
+            target/test-evidence/
+            target/ai-triage/
+
+  samples:
+    name: Pipeline on hand-written sample answers
+    # Everything around the model, on every push, without a key: ai/samples/ holds answers a person
+    # wrote in Claude's answer shape (each file and each report says so). The gate, the repair loop,
+    # the browser runs and the planted-bug failure are real; the AI answers are not.
+    runs-on: ubuntu-latest
+    env:
+      AI_MODE: sample
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install Chromium
+        run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium"
+      - name: Gate the sample drafts (TC-104 fails the rules once, then passes after the repair round)
+        run: ./ai.sh generate TC-103 TC-104
+      - name: Put the TC-104 sample test in the suite for this job only (never committed)
+        run: |
+          mkdir -p src/test/java/com/niranjankagri/aitesting/tests/ai
+          cp ai-drafts/TC-104/OverlappingRequestTest.java src/test/java/com/niranjankagri/aitesting/tests/ai/
+      - name: UI suite against the app with the planted overlap bug (one failure expected)
+        run: ./mvnw -B test -Dsuite=ui -Dleavedesk.bug=true || echo "Failure expected (the bug is planted)"
+      - name: The failure was really captured
+        run: test -f target/test-evidence/OverlappingRequestTest.overlappingSickLeaveIsRefused/failure.json
+      - name: Triage with the sample verdict
+        run: ./ai.sh triage
+      - name: Review pages and triage report to the job summary
+        if: always()
+        run: |
+          cat ai-drafts/*/review.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          cat target/ai-triage/triage.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - name: Keep drafts, evidence and triage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sample-pipeline
+          path: |
+            ai-drafts/
             target/test-evidence/
             target/ai-triage/
