@@ -1,0 +1,19 @@
+{
+  "_note": "Hand-written sample answer, NOT produced by Claude. It has the shape of Claude's answer so the pipeline (quality gate, repair loop, review page) can run without an API key.",
+  "purpose": "generate",
+  "label": "TC-103",
+  "writtenBy": "a person (sample)",
+  "answer": {
+    "className": "SubmitAnnualLeaveTest",
+    "javaSource": "package com.niranjankagri.aitesting.tests.ai;\n\nimport com.niranjankagri.aitesting.framework.BaseUiTest;\nimport com.niranjankagri.aitesting.framework.TestCase;\nimport com.niranjankagri.aitesting.framework.TestUsers;\nimport org.testng.annotations.Test;\n\nimport static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;\n\n/** TC-103: an employee books five working days of annual leave and the balance drops by five. */\npublic class SubmitAnnualLeaveTest extends BaseUiTest {\n\n    @Test(groups = \"ui\")\n    @TestCase(\"TC-103\")\n    public void annualLeaveRequestIsPendingAndReducesTheBalance() {\n        // Arrange: alice on an empty calendar (BaseUiTest resets the data before every test)\n        loginAs(TestUsers.EMPLOYEE);\n\n        // Act: Monday 2 Nov to Friday 6 Nov 2026, no reason\n        dashboardPage.submitRequest(\"ANNUAL\", \"2026-11-02\", \"2026-11-06\", \"\");\n\n        // Assert: confirmation, the new row, and 24 - 5 = 19 days left\n        assertThat(dashboardPage.formSuccess()).hasText(\"Request #1 submitted (5 working days)\");\n        assertThat(dashboardPage.row(1)).isVisible();\n        assertThat(dashboardPage.status(1)).hasText(\"PENDING\");\n        assertThat(dashboardPage.annualRemaining()).hasText(\"19\");\n    }\n}\n",
+    "coverage": [
+      "Success message: assertThat(formSuccess()).hasText(\"Request #1 submitted (5 working days)\")",
+      "Request 1 PENDING: assertThat(row(1)).isVisible() and assertThat(status(1)).hasText(\"PENDING\")",
+      "Annual leave left 19: assertThat(annualRemaining()).hasText(\"19\")"
+    ],
+    "assumptions": [
+      "A pending request already counts against the balance (the test case expects 19 before approval)"
+    ],
+    "missingPageMethods": []
+  }
+}

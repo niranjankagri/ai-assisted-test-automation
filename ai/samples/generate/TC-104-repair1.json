@@ -1,0 +1,19 @@
+{
+  "_note": "Hand-written sample answer, NOT produced by Claude. It has the shape of Claude's answer so the pipeline (quality gate, repair loop, review page) can run without an API key.",
+  "purpose": "generate",
+  "label": "TC-104-repair1",
+  "writtenBy": "a person (sample)",
+  "answer": {
+    "className": "OverlappingRequestTest",
+    "javaSource": "package com.niranjankagri.aitesting.tests.ai;\n\nimport com.niranjankagri.aitesting.framework.BaseUiTest;\nimport com.niranjankagri.aitesting.framework.TestCase;\nimport com.niranjankagri.aitesting.framework.TestUsers;\nimport org.testng.annotations.Test;\n\nimport static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;\n\n/** TC-104: a second request that overlaps the first one is refused and changes nothing. */\npublic class OverlappingRequestTest extends BaseUiTest {\n\n    @Test(groups = \"ui\")\n    @TestCase(\"TC-104\")\n    public void overlappingSickLeaveIsRefused() {\n        // Arrange: alice already has annual leave from 2 to 6 Nov 2026\n        loginAs(TestUsers.EMPLOYEE);\n        dashboardPage.submitRequest(\"ANNUAL\", \"2026-11-02\", \"2026-11-06\", \"\");\n        assertThat(dashboardPage.formSuccess()).hasText(\"Request #1 submitted (5 working days)\");\n\n        // Act: sick leave from 5 to 9 Nov overlaps the last two days\n        dashboardPage.submitRequest(\"SICK\", \"2026-11-05\", \"2026-11-09\", \"\");\n\n        // Assert: refused, still one request, balance unchanged\n        assertThat(dashboardPage.formError()).hasText(\"These dates overlap another request\");\n        assertThat(dashboardPage.rows()).hasCount(1);\n        assertThat(dashboardPage.annualRemaining()).hasText(\"19\");\n    }\n}\n",
+    "coverage": [
+      "Overlap error: assertThat(formError()).hasText(\"These dates overlap another request\")",
+      "Still one request: assertThat(rows()).hasCount(1)",
+      "Annual leave left 19: assertThat(annualRemaining()).hasText(\"19\")"
+    ],
+    "assumptions": [
+      "The first request is checked for success before the second one, so a failure points at the overlap rule"
+    ],
+    "missingPageMethods": []
+  }
+}

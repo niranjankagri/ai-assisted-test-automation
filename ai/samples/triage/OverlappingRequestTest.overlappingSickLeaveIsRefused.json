@@ -1,0 +1,20 @@
+{
+  "_note": "Hand-written sample answer, NOT produced by Claude. A person wrote it from the evidence of a real run against LeaveDesk started with -Dleavedesk.bug=true, in the shape Claude's triage returns, so the triage report can be shown without an API key.",
+  "purpose": "triage",
+  "label": "OverlappingRequestTest.overlappingSickLeaveIsRefused",
+  "writtenBy": "a person (sample)",
+  "answer": {
+    "category": "PRODUCT_BUG",
+    "confidence": "HIGH",
+    "summary": "The app accepted a sick-leave request (5-9 Nov) that overlaps the existing annual leave (2-6 Nov). The test expected the overlap error, and the app created request #2 instead.",
+    "evidence": [
+      "Error: getByTestId(\"leave-error\") stayed empty and hidden: Expected \"These dates overlap another request\", Received \"\"",
+      "Page HTML at failure: leave-success shows \"Request #2 submitted (3 working days)\", so the second request was saved",
+      "Page HTML at failure: the table holds leave-row-1 and leave-row-2, both PENDING (the test case expects one request)",
+      "The first request passed its own success check, so login, the form and the page objects work; only the overlap rule did not fire",
+      "Browser console is empty: no script error on the page"
+    ],
+    "nextStep": "Raise a bug for the overlap check in leave request validation and keep this test failing until it is fixed. No change to the test is needed.",
+    "bugReportMarkdown": "**Title:** Overlapping leave request is accepted\n\n**Steps:** sign in as alice; request ANNUAL 2026-11-02 to 2026-11-06; request SICK 2026-11-05 to 2026-11-09.\n\n**Expected:** the second request is refused with \"These dates overlap another request\"; one request in the table (TC-104).\n\n**Actual:** \"Request #2 submitted (3 working days)\"; two PENDING requests for the same days.\n\n**Evidence:** test OverlappingRequestTest.overlappingSickLeaveIsRefused, screenshot, page HTML and trace in the CI artifact.\n\n**Severity:** high: an employee can book the same days twice."
+  }
+}
