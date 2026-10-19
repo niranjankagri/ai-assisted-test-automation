@@ -81,12 +81,13 @@ public final class Cli {
             return 2;
         }
         AiGateway ai = AiGateway.fromEnvironment();
-        System.out.println("Model " + ai.model() + ", mode " + (ai.isLive() ? "live (answers are recorded)"
-                : "replay (recorded answers, no API key needed)"));
+        System.out.println("Model " + ai.model() + ", mode " + ai.modeDescription());
         TestGenerator generator = new TestGenerator(ai);
         int failed = 0;
+        boolean anySample = false;
         for (String id : ids) {
             TestGenerator.Result r = generator.generate(id);
+            anySample |= r.sample();
             System.out.println((r.gate().passed() ? "PASSED " : "FAILED ") + id + " -> " + r.folder()
                     + "/review.md (" + r.rounds() + (r.rounds() == 1 ? " round)" : " rounds)"));
             r.usage().forEach(u -> System.out.println("    " + u));
@@ -94,8 +95,9 @@ public final class Cli {
                 failed++;
             }
         }
-        System.out.println(failed == 0 ? "All drafts passed the gate. Review them, then: ai approve <id> Your Name"
-                : failed + " draft(s) failed the gate; see review.md in their folders.");
+        System.out.println(failed > 0 ? failed + " draft(s) failed the gate; see review.md in their folders."
+                : anySample ? "All sample drafts passed the gate. They show the pipeline only and cannot be approved."
+                : "All drafts passed the gate. Review them, then: ai approve <id> Your Name");
         return failed == 0 ? 0 : 1;
     }
 
@@ -134,6 +136,7 @@ public final class Cli {
 
     private static int triage() {
         AiGateway ai = AiGateway.fromEnvironment();
+        System.out.println("Model " + ai.model() + ", mode " + ai.modeDescription());
         List<FailureTriage.Triaged> results = new FailureTriage(ai, Path.of("target", "test-evidence")).triageAll();
         if (results.isEmpty()) {
             System.out.println("No failed tests in target/test-evidence. Run the UI tests first: mvnw test -Dsuite=ui");
@@ -158,7 +161,8 @@ public final class Cli {
                   gate TC-103                   re-run the gate on a draft you edited
                   approve TC-103 Your Name      move a passed draft into src/test with @AiDrafted
                   triage                        Claude triages the failures of the last UI run
-                Live mode needs ANTHROPIC_API_KEY; without it, recorded answers are replayed.""");
+                Live mode needs ANTHROPIC_API_KEY; without it, recorded answers are replayed.
+                AI_MODE=sample uses the hand-written sample answers in ai/samples (not from Claude).""");
         return 0;
     }
 }

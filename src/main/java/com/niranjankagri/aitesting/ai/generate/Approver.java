@@ -34,6 +34,10 @@ public final class Approver {
         Path folder = ProjectFiles.DRAFTS.resolve(testCaseId);
         try {
             JsonNode meta = JSON.readTree(folder.resolve("draft.json").toFile());
+            if ("sample".equals(meta.path("source").asText())) {
+                throw new IllegalStateException(testCaseId + " is a hand-written sample draft, not Claude's: it shows"
+                        + " the pipeline and cannot be approved as @AiDrafted. Generate it with ANTHROPIC_API_KEY set.");
+            }
             if (!meta.get("gatePassed").asBoolean()) {
                 throw new IllegalStateException(testCaseId + " did not pass the quality gate; generate it again"
                         + " or fix the draft and run: ai gate " + testCaseId);

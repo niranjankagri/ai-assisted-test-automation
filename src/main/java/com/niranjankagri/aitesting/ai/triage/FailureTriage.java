@@ -32,8 +32,8 @@ public final class FailureTriage {
     /** Enough HTML to see the page state; the full DOM of a bigger app would only add cost. */
     private static final int MAX_HTML_CHARS = 20_000;
 
-    /** One triaged failure. */
-    public record Triaged(String test, String testCase, TriageVerdict verdict, String usage) {
+    /** One triaged failure; {@code sample} = the verdict is a hand-written sample, not Claude's. */
+    public record Triaged(String test, String testCase, TriageVerdict verdict, String usage, boolean sample) {
     }
 
     private final AiGateway ai;
@@ -106,7 +106,7 @@ public final class FailureTriage {
                     TriageVerdict.class));
             Files.createDirectories(OUTPUT);
             JSON.writeValue(OUTPUT.resolve(folder.getFileName() + ".json").toFile(), answer.value());
-            return new Triaged(test, testCaseId, answer.value(), answer.usageLine());
+            return new Triaged(test, testCaseId, answer.value(), answer.usageLine(), answer.sample());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -126,6 +126,9 @@ public final class FailureTriage {
 
     private void writeReport(List<Triaged> results) {
         StringBuilder md = new StringBuilder("# AI failure triage\n\n");
+        if (results.stream().anyMatch(Triaged::sample)) {
+            md.append(AiGateway.SAMPLE_BANNER).append("\n\n");
+        }
         if (results.isEmpty()) {
             md.append("No failed tests in ").append(evidenceRoot).append(".\n");
         } else {

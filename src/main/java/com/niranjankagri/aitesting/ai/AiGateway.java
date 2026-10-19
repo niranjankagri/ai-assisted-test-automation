@@ -40,12 +40,15 @@ import java.util.Locale;
 /**
  * The single place where this project talks to Claude.
  *
- * <p>Two modes, chosen by the environment:
+ * <p>Three modes, chosen by the environment:
  * <ul>
  *   <li><b>live</b> (ANTHROPIC_API_KEY is set): calls the Messages API and saves the answer as a
  *       recording under ai/recordings/, so the same question can be answered later without a key.</li>
  *   <li><b>replay</b> (no key, or AI_MODE=replay): answers only from recordings. CI runs this way,
  *       so the pipeline is tested on every push for free and gives the same result every time.</li>
+ *   <li><b>sample</b> (AI_MODE=sample): answers from ai/samples/, answers a person wrote by hand in
+ *       the shape Claude would return. They exercise everything around the model (gate, repair
+ *       loop, review page, triage report) without a key; every report built from them says so.</li>
  * </ul>
  * Every answer is a typed Java record: the SDK derives a JSON schema from the record class and the
  * API's structured outputs guarantee a reply that matches it, so no fragile text parsing.
@@ -54,6 +57,12 @@ public final class AiGateway {
 
     public static final String DEFAULT_MODEL = "claude-opus-5-5";
     public static final Path RECORDINGS = Path.of("ai", "recordings");
+    public static final Path SAMPLES = Path.of("ai", "samples");
+    /** Opening line of every report built from sample answers. */
+    public static final String SAMPLE_BANNER = "> **Sample answer, not from Claude.** A person wrote the answer"
+            + " below by hand (ai/samples/) to show the pipeline without an API key. The quality gate, the"
+            + " browser runs and the report are real; the AI part is not. Run with ANTHROPIC_API_KEY for"
+            + " Claude's own answer.";
     private static final Path USAGE_LOG = Path.of("target", "ai-usage.csv");
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
@@ -96,8 +105,20 @@ public final class AiGateway {
                              List<Turn> turns, OutputConfig.Effort effort, Class<T> answerType) {
     }
 
-    /** The typed answer, plus whether it came from a recording and what it cost. */
-    public record Answer<T>(T value, boolean replayed, String usageLine) {
+    /** Where an answer came from. */
+    public enum Source { LIVE, RECORDING, SAMPLE }
+
+    /** The typed answer, plus where it came from and what it cost. */
+    public record Answer<T>(T value, Source source, String usageLine) {
+
+        /** True when no API call was made (recording or sample). */
+        public boolean replayed() {
+            return source != Source.LIVE;
+        }
+
+        public boolean sample() {
+            return source == Source.SAMPLE;
+        }
     }
 
     /** Claude declined, ran out of tokens, or replay had no recording: the caller stops with this message. */
@@ -108,25 +129,31 @@ public final class AiGateway {
     }
 
     private final String model;
-    private final boolean live;
+    private final Source mode;
     private AnthropicClient client;
 
-    private AiGateway(String model, boolean live) {
+    private AiGateway(String model, Source mode) {
         this.model = model;
-        this.live = live;
+        this.mode = mode;
     }
 
-    /** Mode and model from the environment: AI_MODE (live|replay), AI_MODEL, ANTHROPIC_API_KEY. */
+    /** Mode and model from the environment: AI_MODE (live|replay|sample), AI_MODEL, ANTHROPIC_API_KEY. */
     public static AiGateway fromEnvironment() {
         String mode = System.getenv().getOrDefault("AI_MODE", "");
         boolean hasKey = !System.getenv().getOrDefault("ANTHROPIC_API_KEY", "").isBlank();
-        boolean live = mode.isBlank() ? hasKey : mode.equalsIgnoreCase("live");
-        return new AiGateway(System.getenv().getOrDefault("AI_MODEL", DEFAULT_MODEL), live);
+        Source source = mode.equalsIgnoreCase("sample") ? Source.SAMPLE
+                : (mode.isBlank() ? hasKey : mode.equalsIgnoreCase("live")) ? Source.LIVE : Source.RECORDING;
+        return new AiGateway(System.getenv().getOrDefault("AI_MODEL", DEFAULT_MODEL), source);
     }
 
     /** Replay-only gateway for unit tests. */
     public static AiGateway replayOnly(String model) {
-        return new AiGateway(model, false);
+        return new AiGateway(model, Source.RECORDING);
+    }
+
+    /** Sample-only gateway for unit tests. */
+    public static AiGateway samplesOnly(String model) {
+        return new AiGateway(model, Source.SAMPLE);
     }
 
     public String model() {
@@ -134,13 +161,29 @@ public final class AiGateway {
     }
 
     public boolean isLive() {
-        return live;
+        return mode == Source.LIVE;
     }
 
-    /** Asks the question live (and records it) or answers it from the recording. */
+    public boolean isSample() {
+        return mode == Source.SAMPLE;
+    }
+
+    /** One line for the console: which mode answers the questions. */
+    public String modeDescription() {
+        return switch (mode) {
+            case LIVE -> "live (answers are recorded)";
+            case RECORDING -> "replay (recorded answers, no API key needed)";
+            case SAMPLE -> "sample (hand-written answers from ai/samples, NOT from Claude)";
+        };
+    }
+
+    /** Asks the question live (and records it), or answers it from a recording or a sample. */
     public <T> Answer<T> ask(Request<T> request) {
+        if (mode == Source.SAMPLE) {
+            return sample(request, sampleFile(request));
+        }
         Path recording = recordingFile(request);
-        if (!live) {
+        if (mode == Source.RECORDING) {
             return replay(request, recording);
         }
         StructuredMessage<T> message = client().messages().create(toParams(request));
@@ -148,7 +191,15 @@ public final class AiGateway {
         String usage = usageLine(message.usage());
         save(recording, request, value, message.usage());
         logUsage(request, message.usage());
-        return new Answer<>(value, false, usage);
+        return new Answer<>(value, Source.LIVE, usage);
+    }
+
+    /**
+     * ai/samples/&lt;purpose&gt;/&lt;label&gt;.json. Keyed by label only, not by a hash of the inputs: a
+     * sample is written by hand once and does not go stale the way a recording of a prompt does.
+     */
+    public <T> Path sampleFile(Request<T> request) {
+        return SAMPLES.resolve(request.purpose()).resolve(request.label() + ".json");
     }
 
     /** ai/recordings/&lt;purpose&gt;/&lt;label&gt;-&lt;first 12 hex chars of SHA-256(model + key material)&gt;.json */
@@ -230,7 +281,22 @@ public final class AiGateway {
         try {
             JsonNode saved = JSON.readTree(recording.toFile());
             T value = JSON.treeToValue(saved.get("answer"), request.answerType());
-            return new Answer<>(value, true, "replayed " + recording.toString().replace('\\', '/'));
+            return new Answer<>(value, Source.RECORDING, "replayed " + recording.toString().replace('\\', '/'));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private <T> Answer<T> sample(Request<T> request, Path sample) {
+        if (!Files.exists(sample)) {
+            throw new AiException("No sample answer for " + request.purpose() + " " + request.label() + " (" + sample
+                    + "). Samples exist only for the demo cases; use live mode for the others.");
+        }
+        try {
+            JsonNode saved = JSON.readTree(sample.toFile());
+            T value = JSON.treeToValue(saved.get("answer"), request.answerType());
+            return new Answer<>(value, Source.SAMPLE, "hand-written sample " + sample.toString().replace('\\', '/')
+                    + " (no Claude call)");
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

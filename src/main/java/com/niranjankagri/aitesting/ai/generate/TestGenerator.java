@@ -37,9 +37,9 @@ public final class TestGenerator {
     public static final int MAX_REPAIRS = 2;
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
-    /** What one generate run produced. */
+    /** What one generate run produced; {@code sample} = the answers were hand-written samples. */
     public record Result(String testCaseId, DraftTest draft, GateReport gate, int rounds, Path folder,
-                         List<String> usage) {
+                         List<String> usage, boolean sample) {
     }
 
     private final AiGateway ai;
@@ -61,6 +61,7 @@ public final class TestGenerator {
 
         DraftTest draft = null;
         GateReport gate = null;
+        boolean sample = false;
         int round = 0;
         while (round <= MAX_REPAIRS) {
             round++;
@@ -72,9 +73,11 @@ public final class TestGenerator {
                     testCaseId + (round == 1 ? "" : "-repair" + (round - 1)), key,
                     List.of(systemPrompt, context), List.copyOf(turns), OutputConfig.Effort.HIGH, DraftTest.class));
             draft = answer.value();
+            sample |= answer.sample();
             usage.add("round " + round + ": " + answer.usageLine());
             System.out.println("  " + testCaseId + " round " + round + ": " + draft.className()
-                    + (answer.replayed() ? " (replayed)" : "") + ", running the quality gate...");
+                    + (answer.sample() ? " (hand-written sample)" : answer.replayed() ? " (replayed)" : "")
+                    + ", running the quality gate...");
 
             gate = new QualityGate(gateRoot.resolve("round" + round))
                     .check(testCase, draft.className(), draft.javaSource(), draft.coverage());
@@ -87,8 +90,8 @@ public final class TestGenerator {
                     + "\n\nFix it and return the whole corrected answer in the same format.")));
         }
 
-        Path folder = writeDraftFolder(testCase, draft, gate, round, usage);
-        return new Result(testCaseId, draft, gate, round, folder, usage);
+        Path folder = writeDraftFolder(testCase, draft, gate, round, usage, sample);
+        return new Result(testCaseId, draft, gate, round, folder, usage, sample);
     }
 
     /** The framework files Claude reads, each under a "=== path ===" header. */
@@ -103,7 +106,7 @@ public final class TestGenerator {
     }
 
     private Path writeDraftFolder(TestCaseDoc testCase, DraftTest draft, GateReport gate, int rounds,
-                                  List<String> usage) {
+                                  List<String> usage, boolean sample) {
         Path folder = ProjectFiles.DRAFTS.resolve(testCase.id());
         try {
             Files.createDirectories(folder);
@@ -117,12 +120,15 @@ public final class TestGenerator {
             Map<String, Object> meta = new LinkedHashMap<>();
             meta.put("testCase", testCase.id());
             meta.put("className", draft.className());
-            meta.put("model", ai.model());
+            meta.put("model", sample ? "hand-written sample" : ai.model());
+            // The approve step refuses samples: a hand-written draft must never be marked @AiDrafted.
+            meta.put("source", sample ? "sample" : "claude");
             meta.put("gatePassed", gate.passed());
             meta.put("rounds", rounds);
             JSON.writeValue(folder.resolve("draft.json").toFile(), meta);
 
-            Files.writeString(folder.resolve("review.md"), reviewMarkdown(testCase, draft, gate, rounds, usage));
+            Files.writeString(folder.resolve("review.md"),
+                    reviewMarkdown(testCase, draft, gate, rounds, usage, sample));
             return folder;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -131,10 +137,14 @@ public final class TestGenerator {
 
     /** The page a reviewer reads: the test case next to what the test claims to check. */
     private String reviewMarkdown(TestCaseDoc testCase, DraftTest draft, GateReport gate, int rounds,
-                                  List<String> usage) {
+                                  List<String> usage, boolean sample) {
         StringBuilder md = new StringBuilder();
         md.append("# Review: ").append(testCase.id()).append(" ").append(testCase.title()).append("\n\n");
-        md.append("Draft `").append(draft.className()).append(".java` by ").append(ai.model()).append(", ")
+        if (sample) {
+            md.append(AiGateway.SAMPLE_BANNER).append("\n\n");
+        }
+        md.append("Draft `").append(draft.className()).append(".java` ")
+                .append(sample ? "(hand-written sample)" : "by " + ai.model()).append(", ")
                 .append(rounds).append(rounds == 1 ? " round" : " rounds").append(". Quality gate: **")
                 .append(gate.passed() ? "passed" : "FAILED").append("**.\n\n");
         md.append("## Review checklist\n\n")
@@ -152,8 +162,13 @@ public final class TestGenerator {
         md.append("\n## Claude usage\n\n");
         usage.forEach(u -> md.append("- ").append(u).append("\n"));
         md.append("\n## Test case\n\n").append(testCase.markdown().replaceFirst("(?m)^# ", "### "));
-        md.append("\n## Next step\n\nApprove: `ai approve ").append(testCase.id())
-                .append(" Your Name` (copies the test into src/test with @AiDrafted). Or edit the draft first.\n");
+        if (sample) {
+            md.append("\n## Next step\n\nNone: sample drafts show the pipeline and are never approved into src/test."
+                    + " Generate with ANTHROPIC_API_KEY set to get a draft from Claude that can be approved.\n");
+        } else {
+            md.append("\n## Next step\n\nApprove: `ai approve ").append(testCase.id())
+                    .append(" Your Name` (copies the test into src/test with @AiDrafted). Or edit the draft first.\n");
+        }
         return md.toString();
     }
 
