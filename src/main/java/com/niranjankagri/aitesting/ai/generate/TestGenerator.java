@@ -44,10 +44,15 @@ public final class TestGenerator {
 
     private final AiGateway ai;
 
+    /** The gateway decides the mode, so tests can hand in a replay-only or sample-only one. */
     public TestGenerator(AiGateway ai) {
         this.ai = ai;
     }
 
+    /**
+     * Drafts one test case: asks for a draft, runs the gate and, while it fails, sends the findings back for up to
+     * MAX_REPAIRS repair rounds. Writes ai-drafts/<id>/ for review and returns what happened.
+     */
     public Result generate(String testCaseId) {
         TestCaseDoc testCase = ProjectFiles.testCase(testCaseId);
         String systemPrompt = ProjectFiles.resource("prompts/generate-system.md");
@@ -105,6 +110,7 @@ public final class TestGenerator {
         return text.toString();
     }
 
+    /** Replaces ai-drafts/<id>/ with the Java file, draft.json (what ai approve reads) and review.md. */
     private Path writeDraftFolder(TestCaseDoc testCase, DraftTest draft, GateReport gate, int rounds,
                                   List<String> usage, boolean sample) {
         Path folder = ProjectFiles.DRAFTS.resolve(testCase.id());
@@ -172,6 +178,7 @@ public final class TestGenerator {
         return md.toString();
     }
 
+    /** A Markdown bullet list, or "- none" for an empty one. */
     private static void appendList(StringBuilder md, List<String> items) {
         if (items.isEmpty()) {
             md.append("- none\n");
@@ -180,6 +187,7 @@ public final class TestGenerator {
         }
     }
 
+    /** The draft as JSON, sent back as Claude's own earlier answer in a repair round. */
     private static String toJson(DraftTest draft) {
         try {
             return JSON.writeValueAsString(draft);

@@ -14,6 +14,7 @@ public class DashboardPage {
 
     private final Page page;
 
+    /** Wraps the page of the running test. */
     public DashboardPage(Page page) {
         this.page = page;
     }
@@ -104,14 +105,17 @@ public class DashboardPage {
         return page.getByTestId("cancel-" + requestId);
     }
 
+    /** Approves a request (manager). */
     public void approve(int requestId) {
         approveButton(requestId).click();
     }
 
+    /** Rejects a request (manager). */
     public void reject(int requestId) {
         rejectButton(requestId).click();
     }
 
+    /** Cancels one of your own pending requests. */
     public void cancel(int requestId) {
         cancelButton(requestId).click();
     }

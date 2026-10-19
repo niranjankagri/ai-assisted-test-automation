@@ -24,17 +24,23 @@ public final class LeaveStore {
     /** Upper limit of one request, in working days. */
     public static final int MAX_DAYS_PER_REQUEST = 20;
 
+    /** Employees file requests; managers decide on other people's requests. */
     public enum Role { EMPLOYEE, MANAGER }
 
+    /** Only ANNUAL counts against the balance; UNPAID needs a reason. */
     public enum Type { ANNUAL, SICK, UNPAID }
 
+    /** PENDING and APPROVED block the calendar and the balance; REJECTED and CANCELLED do not. */
     public enum Status { PENDING, APPROVED, REJECTED, CANCELLED }
 
+    /** A demo user. The password is in plain text on purpose: fixed demo data, published in the README. */
     public record User(String username, String password, String displayName, Role role) {}
 
+    /** One leave request: id, owner's user name, type, dates (both included), working days, reason and status. */
     public record Leave(int id, String owner, Type type, LocalDate from, LocalDate to, int days,
                         String reason, Status status) {
 
+        /** A copy in the new status (records cannot change). */
         Leave withStatus(Status newStatus) {
             return new Leave(id, owner, type, from, to, days, reason, newStatus);
         }
@@ -49,6 +55,7 @@ public final class LeaveStore {
     public static final class RuleException extends RuntimeException {
         private final int httpStatus;
 
+        /** httpStatus: 400 bad input, 403 not allowed, 404 not found. */
         RuleException(int httpStatus, String message) {
             super(message);
             this.httpStatus = httpStatus;
@@ -82,11 +89,15 @@ public final class LeaveStore {
         nextId.set(1);
     }
 
+    /**
+     * The user for these credentials: the name is trimmed and case-insensitive, the password must match exactly.
+     */
     public Optional<User> authenticate(String username, String password) {
         User user = users.get(username == null ? "" : username.trim().toLowerCase());
         return user != null && user.password().equals(password) ? Optional.of(user) : Optional.empty();
     }
 
+    /** The user with this exact (lower-case) name. */
     public Optional<User> user(String username) {
         return Optional.ofNullable(users.get(username));
     }
@@ -177,6 +188,7 @@ public final class LeaveStore {
         return cancelled;
     }
 
+    /** The request with this id, or a 404 RuleException. */
     private Leave find(int id) {
         Leave leave = leaves.get(id);
         if (leave == null) {

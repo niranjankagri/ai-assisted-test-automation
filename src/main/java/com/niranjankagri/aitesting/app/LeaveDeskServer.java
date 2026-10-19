@@ -47,6 +47,10 @@ public final class LeaveDeskServer implements AutoCloseable {
     /** Bearer token to username. Tokens survive a data reset, so a logged-in browser stays logged in. */
     private final Map<String, String> sessions = new ConcurrentHashMap<>();
 
+    /**
+     * Binds to 127.0.0.1 only (a test app must not be reachable from the network) and handles requests on 8
+     * threads.
+     */
     private LeaveDeskServer(int port, boolean overlapBug) throws IOException {
         this.store = new LeaveStore(overlapBug);
         this.server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
@@ -65,16 +69,22 @@ public final class LeaveDeskServer implements AutoCloseable {
         return app;
     }
 
+    /** http://127.0.0.1:<port>, the port the server really got. */
     public String baseUrl() {
         return "http://127.0.0.1:" + server.getAddress().getPort();
     }
 
+    /** Stops the server at once and its request threads with it. */
     @Override
     public void close() {
         server.stop(0);
         ((java.util.concurrent.ExecutorService) server.getExecutor()).shutdownNow();
     }
 
+    /**
+     * Every request: files for non-API paths, otherwise the API, with broken rules and bad input answered as JSON
+     * errors (400/403/404) instead of server errors.
+     */
     private void handle(HttpExchange ex) throws IOException {
         try (ex) {
             String path = ex.getRequestURI().getPath();
@@ -93,6 +103,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /**
+     * The public endpoints (health, data reset for tests, login); everything else needs a valid token (401
+     * otherwise).
+     */
     private void route(HttpExchange ex, String method, String path) throws IOException {
         if (method.equals("GET") && path.equals("/api/health")) {
             send(ex, 200, Map.of("status", "ok"));
@@ -112,6 +126,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /**
+     * The endpoints for a logged-in user: profile, list, create, and approve / reject / cancel by id; anything
+     * else is 404.
+     */
     private void routeAuthenticated(HttpExchange ex, String method, String path, User user) throws IOException {
         Matcher decision = DECISION.matcher(path);
         if (method.equals("GET") && path.equals("/api/me")) {
@@ -139,6 +157,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /**
+     * Checks the credentials and answers with the profile plus a new random token, or 401 with the error text the
+     * UI shows.
+     */
     private void login(HttpExchange ex) throws IOException {
         JsonNode body = readBody(ex);
         Optional<User> user = store.authenticate(text(body, "username"), text(body, "password"));
@@ -153,6 +175,7 @@ public final class LeaveDeskServer implements AutoCloseable {
         send(ex, 200, out);
     }
 
+    /** The profile the UI shows: user name, display name, role and annual days left. */
     private Map<String, Object> me(User user) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("username", user.username());
@@ -162,6 +185,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         return out;
     }
 
+    /**
+     * The user behind the request's "Authorization: Bearer <token>" header, or empty for a missing or unknown
+     * token.
+     */
     private Optional<User> currentUser(HttpExchange ex) {
         String header = ex.getRequestHeaders().getFirst("Authorization");
         if (header == null || !header.startsWith("Bearer ")) {
@@ -171,6 +198,7 @@ public final class LeaveDeskServer implements AutoCloseable {
         return username == null ? Optional.empty() : store.user(username);
     }
 
+    /** A request as the JSON object the API returns, with ISO dates and enum names. */
     private static Map<String, Object> toJson(Leave l) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("id", l.id());
@@ -184,6 +212,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         return out;
     }
 
+    /**
+     * The leave type from the request body, case-insensitive; empty means missing (the store reports that), an
+     * unknown value is a 400.
+     */
     private static LeaveStore.Type parseType(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -195,6 +227,7 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /** An ISO date from the request body; a wrong format is a 400 whose message shows the expected format. */
     private static LocalDate parseDate(String value, String label) {
         if (value == null || value.isBlank()) {
             return null;
@@ -206,11 +239,13 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /** A field as text, or null when it is missing or JSON null. */
     private static String text(JsonNode body, String field) {
         JsonNode node = body.get(field);
         return node == null || node.isNull() ? null : node.asText();
     }
 
+    /** The request body as JSON; an empty body is an empty object, invalid JSON a 400. */
     private static JsonNode readBody(HttpExchange ex) throws IOException {
         try (InputStream in = ex.getRequestBody()) {
             byte[] bytes = in.readAllBytes();
@@ -225,6 +260,7 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /** Writes a JSON response with the given status. */
     private static void send(HttpExchange ex, int status, Object body) throws IOException {
         byte[] bytes = JSON.writeValueAsBytes(body);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
@@ -234,6 +270,10 @@ public final class LeaveDeskServer implements AutoCloseable {
         }
     }
 
+    /**
+     * Serves the UI files from /web on the classpath. Only plain file names are allowed, so a path like
+     * /../pom.xml gets 404 instead of a file from outside the web folder.
+     */
     private static void serveStatic(HttpExchange ex, String path) throws IOException {
         String file = path.equals("/") ? "index.html" : path.substring(1);
         // Only plain file names from /web; anything with a folder or ".." is refused.

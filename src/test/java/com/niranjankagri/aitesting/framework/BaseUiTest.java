@@ -48,6 +48,10 @@ public abstract class BaseUiTest {
     protected LoginPage loginPage;
     protected DashboardPage dashboardPage;
 
+    /**
+     * Once per suite: the app on a free port (with the planted bug if -Dleavedesk.bug=true) and one browser of the
+     * chosen engine.
+     */
     @BeforeSuite(alwaysRun = true)
     public void startAppAndBrowser() throws IOException {
         app = LeaveDeskServer.start(0, Boolean.getBoolean("leavedesk.bug"));
@@ -61,6 +65,7 @@ public abstract class BaseUiTest {
                 .setHeadless(!"false".equals(System.getProperty("headless"))));
     }
 
+    /** Closes Playwright (and with it the browser), then the app. */
     @AfterSuite(alwaysRun = true)
     public void stopAppAndBrowser() {
         if (playwright != null) {
@@ -71,6 +76,10 @@ public abstract class BaseUiTest {
         }
     }
 
+    /**
+     * Before every test: empty calendar, fresh browser context with the app's base URL, trace recording, console
+     * capture and new page objects.
+     */
     @BeforeMethod(alwaysRun = true)
     public void freshContext() {
         resetAppData();
@@ -84,6 +93,7 @@ public abstract class BaseUiTest {
         dashboardPage = new DashboardPage(page);
     }
 
+    /** After every test: keeps the trace only when the test failed, then closes the context. */
     @AfterMethod(alwaysRun = true)
     public void closeContext(ITestResult result) {
         if (context == null) {

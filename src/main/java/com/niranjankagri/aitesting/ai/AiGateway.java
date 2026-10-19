@@ -70,19 +70,23 @@ public final class AiGateway {
     public sealed interface Part permits Text, Png {
     }
 
+    /** A text part of a message. */
     public record Text(String text) implements Part {
     }
 
+    /** A PNG screenshot; triage sends the failure screenshot this way. */
     public record Png(byte[] bytes) implements Part {
     }
 
     /** One turn of the conversation. Assistant turns are earlier answers (for repair rounds). */
     public record Turn(boolean fromUser, List<Part> parts) {
 
+        /** A user turn made of text and screenshot parts. */
         public static Turn user(Part... parts) {
             return new Turn(true, List.of(parts));
         }
 
+        /** An earlier answer, sent back in a repair round so Claude sees what it wrote. */
         public static Turn assistant(String text) {
             return new Turn(false, List.of(new Text(text)));
         }
@@ -123,6 +127,7 @@ public final class AiGateway {
 
     /** Claude declined, ran out of tokens, or replay had no recording: the caller stops with this message. */
     public static final class AiException extends RuntimeException {
+        /** The message says what happened and how to fix it. */
         public AiException(String message) {
             super(message);
         }
@@ -132,6 +137,9 @@ public final class AiGateway {
     private final Source mode;
     private AnthropicClient client;
 
+    /**
+     * Use fromEnvironment(), replayOnly() or samplesOnly(); the SDK client is only created on the first live call.
+     */
     private AiGateway(String model, Source mode) {
         this.model = model;
         this.mode = mode;
@@ -208,6 +216,10 @@ public final class AiGateway {
         return RECORDINGS.resolve(request.purpose()).resolve(request.label() + "-" + hash + ".json");
     }
 
+    /**
+     * Builds the API request: model, token limit, system blocks with a cache breakpoint on the last one,
+     * structured output into the answer's record type, the refusal fallback, and the conversation turns.
+     */
     private <T> StructuredMessageCreateParams<T> toParams(Request<T> request) {
         List<TextBlockParam> system = new ArrayList<>();
         for (int i = 0; i < request.system().size(); i++) {
@@ -242,6 +254,7 @@ public final class AiGateway {
         return params.build();
     }
 
+    /** One message part as an API content block: text as is, a screenshot as a base64 PNG image. */
     private static ContentBlockParam toBlock(Part part) {
         return switch (part) {
             case Text t -> ContentBlockParam.ofText(TextBlockParam.builder().text(t.text()).build());
@@ -272,6 +285,10 @@ public final class AiGateway {
                 .orElseThrow(() -> new AiException("Claude returned no answer for " + request.label()));
     }
 
+    /**
+     * Answers from a recording; a missing one means the prompt or its inputs changed since recording, and the
+     * message says how to record again.
+     */
     private <T> Answer<T> replay(Request<T> request, Path recording) {
         if (!Files.exists(recording)) {
             throw new AiException("No recording for " + request.purpose() + " " + request.label() + " (" + recording
@@ -287,6 +304,9 @@ public final class AiGateway {
         }
     }
 
+    /**
+     * Answers from a hand-written sample and marks the answer as SAMPLE, which is what makes every report say so.
+     */
     private <T> Answer<T> sample(Request<T> request, Path sample) {
         if (!Files.exists(sample)) {
             throw new AiException("No sample answer for " + request.purpose() + " " + request.label() + " (" + sample
@@ -302,6 +322,10 @@ public final class AiGateway {
         }
     }
 
+    /**
+     * Writes a recording: purpose, label, model, date, token counts and the answer, as indented JSON so it reads
+     * well in a diff.
+     */
     private <T> void save(Path recording, Request<T> request, T value, Usage usage) {
         ObjectNode root = JSON.createObjectNode();
         root.put("purpose", request.purpose());
@@ -320,6 +344,10 @@ public final class AiGateway {
         }
     }
 
+    /**
+     * Appends one CSV line per live call to target/ai-usage.csv (tokens and estimated dollars); a write problem is
+     * only reported, never fails the run.
+     */
     private <T> void logUsage(Request<T> request, Usage usage) {
         try {
             Files.createDirectories(USAGE_LOG.getParent());
@@ -335,6 +363,10 @@ public final class AiGateway {
         }
     }
 
+    /**
+     * The usage line shown in review.md and on the console: tokens in (and how many came from the cache), tokens
+     * out, cost.
+     */
     private String usageLine(Usage usage) {
         long cached = usage.cacheReadInputTokens().orElse(0L);
         double cost = costUsd(usage);
@@ -354,6 +386,9 @@ public final class AiGateway {
                 + usage.outputTokens() * 20.0) / 1_000_000;
     }
 
+    /**
+     * The SDK client, created on first use from ANTHROPIC_API_KEY, so replay and sample modes never need a key.
+     */
     private synchronized AnthropicClient client() {
         if (client == null) {
             client = AnthropicOkHttpClient.fromEnv();
@@ -361,6 +396,7 @@ public final class AiGateway {
         return client;
     }
 
+    /** SHA-256 of the UTF-8 bytes as lower-case hex. */
     public static String sha256(String text) {
         try {
             return HexFormat.of().formatHex(

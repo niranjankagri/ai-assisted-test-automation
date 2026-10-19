@@ -23,11 +23,13 @@ import static org.testng.Assert.expectThrows;
 @Test(groups = "tooling")
 public class ToolingUnitTest {
 
+    /** A minimal request in the unit-test recordings folder; only the key material varies. */
     private static Request<DraftTest> request(String keyMaterial) {
         return new Request<>("unit-test", "TC-000", keyMaterial, List.of("system"),
                 List.of(Turn.user(new Text("question"))), OutputConfig.Effort.LOW, DraftTest.class);
     }
 
+    /** Same inputs, same recording file; an edited test case or another model gives another file. */
     public void recordingNameChangesWhenTheInputsChange() {
         AiGateway ai = AiGateway.replayOnly("claude-opus-5-5");
         Path a = ai.recordingFile(request("test case v1"));
@@ -38,12 +40,14 @@ public class ToolingUnitTest {
         assertTrue(a.toString().replace('\\', '/').matches("ai/recordings/unit-test/TC-000-[0-9a-f]{12}\\.json"), a.toString());
     }
 
+    /** Replay without a recording fails with the way to record it. */
     public void replayWithoutRecordingExplainsHowToRecord() {
         AiException e = expectThrows(AiException.class,
                 () -> AiGateway.replayOnly("claude-opus-5-5").ask(request("never recorded " + System.nanoTime())));
         assertTrue(e.getMessage().contains("set ANTHROPIC_API_KEY and run the command again"), e.getMessage());
     }
 
+    /** A recording is read back into the typed answer and marked as replayed. */
     public void replayReturnsTheRecordedTypedAnswer() throws Exception {
         AiGateway ai = AiGateway.replayOnly("claude-opus-5-5");
         Request<DraftTest> req = request("replay fixture");
@@ -62,6 +66,7 @@ public class ToolingUnitTest {
         }
     }
 
+    /** Sample mode reads ai/samples and marks the answer as a sample, with no API call. */
     public void sampleAnswersComeFromAiSamplesAndAreMarkedAsSamples() {
         Request<DraftTest> req = new Request<>("generate", "TC-103", "ignored in sample mode", List.of("system"),
                 List.of(Turn.user(new Text("question"))), OutputConfig.Effort.LOW, DraftTest.class);
@@ -72,6 +77,7 @@ public class ToolingUnitTest {
         assertTrue(answer.usageLine().contains("no Claude call"), answer.usageLine());
     }
 
+    /** Every sample file in the repository says it is hand-written, not produced by Claude. */
     public void everySampleFileSaysItIsHandWritten() throws Exception {
         List<Path> samples;
         try (var files = Files.walk(AiGateway.SAMPLES)) {
@@ -84,6 +90,10 @@ public class ToolingUnitTest {
         }
     }
 
+    /**
+     * The samples keep up with the gate rules; the first TC-104 sample must still break the selector rule on
+     * purpose.
+     */
     public void sampleDraftsStillMeetTheGateRules() {
         // Rule stage only (no browser): if a rule changes, the samples must be updated with it.
         var tc103 = com.niranjankagri.aitesting.ai.ProjectFiles.testCase("TC-103");
@@ -100,16 +110,19 @@ public class ToolingUnitTest {
                 "the first TC-104 sample breaks the selector rule on purpose, so the repair loop shows");
     }
 
+    /** A generate request for one sample label. */
     private static Request<DraftTest> sampleRequest(String label) {
         return new Request<>("generate", label, "", List.of("system"), List.of(Turn.user(new Text("q"))),
                 OutputConfig.Effort.LOW, DraftTest.class);
     }
 
+    /** True when the draft passes every rule of the gate's first stage. */
     private static boolean rulesPass(com.niranjankagri.aitesting.ai.ProjectFiles.TestCaseDoc tc, DraftTest d) {
         return com.niranjankagri.aitesting.ai.gate.QualityGate.ruleChecks(tc, d.className(), d.javaSource(),
                 d.coverage()).stream().allMatch(c -> c.passed());
     }
 
+    /** ai approve refuses a draft marked as a sample, even when its gate passed. */
     public void approveRefusesASampleDraft() throws Exception {
         Path folder = com.niranjankagri.aitesting.ai.ProjectFiles.DRAFTS.resolve("TC-990");
         Files.createDirectories(folder);
@@ -125,6 +138,7 @@ public class ToolingUnitTest {
         }
     }
 
+    /** Approval adds the @AiDrafted import and annotation with model, reviewer and date in front of the class. */
     public void approveAddsImportAndAnnotation() throws Exception {
         Method mark = Class.forName("com.niranjankagri.aitesting.ai.generate.Approver")
                 .getDeclaredMethod("markApproved", String.class, String.class, String.class, String.class);
@@ -137,6 +151,7 @@ public class ToolingUnitTest {
                 + " reviewedOn = \"2026-10-17\")\npublic class UnpaidLeaveNeedsReasonTest"), out);
     }
 
+    /** Two runs of the same failure that differ only in port and retry count give the same recording key. */
     public void triageKeyIgnoresPortsAndRetryCounts() throws Exception {
         Method stable = Class.forName("com.niranjankagri.aitesting.ai.triage.FailureTriage")
                 .getDeclaredMethod("stable", String.class);

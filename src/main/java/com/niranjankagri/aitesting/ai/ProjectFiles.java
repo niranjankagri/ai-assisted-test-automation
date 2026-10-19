@@ -38,9 +38,14 @@ public final class ProjectFiles {
     public record TestCaseDoc(String id, String title, String markdown) {
     }
 
+    /** Static helpers only: no instances. */
     private ProjectFiles() {
     }
 
+    /**
+     * A text file of the repo with Unix line endings, so a Windows checkout and CI produce the same recording
+     * keys.
+     */
     public static String read(Path file) {
         try {
             // Line endings normalised, so a Windows checkout and CI hash the same text.
@@ -50,6 +55,7 @@ public final class ProjectFiles {
         }
     }
 
+    /** Loads test-cases/<id>.md and checks that its heading carries the same id. */
     public static TestCaseDoc testCase(String id) {
         Path file = TEST_CASES.resolve(id + ".md");
         if (!Files.exists(file)) {

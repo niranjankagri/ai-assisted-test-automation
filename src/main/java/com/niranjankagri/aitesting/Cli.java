@@ -32,9 +32,11 @@ import java.util.List;
  */
 public final class Cli {
 
+    /** Entry point only: no instances. */
     private Cli() {
     }
 
+    /** Runs one command and exits with its code: 0 success, 1 a draft failed the gate, 2 wrong usage. */
     public static void main(String[] args) throws Exception {
         String command = args.length == 0 ? "help" : args[0];
         List<String> rest = Arrays.asList(args).subList(Math.min(1, args.length), args.length);
@@ -54,6 +56,10 @@ public final class Cli {
         System.exit(exit);
     }
 
+    /**
+     * Lists every test case as automated (a test in src/test carries its id), drafted (waiting for review) or
+     * open.
+     */
     private static int status() {
         List<String> automated = ProjectFiles.automatedTestCaseIds();
         for (String id : ProjectFiles.allTestCaseIds()) {
@@ -65,6 +71,10 @@ public final class Cli {
         return 0;
     }
 
+    /**
+     * Drafts the named test cases (or --open / --approved), runs each through the gate and prints where the review
+     * page is.
+     */
     private static int generate(List<String> args) {
         List<String> ids = new ArrayList<>(args);
         if (ids.remove("--open")) {
@@ -101,6 +111,10 @@ public final class Cli {
         return failed == 0 ? 0 : 1;
     }
 
+    /**
+     * Re-runs the full gate on a draft a reviewer edited by hand, using the coverage list from its review.md; a
+     * pass is written back to draft.json so the draft can be approved.
+     */
     private static int gate(List<String> args) throws Exception {
         if (args.isEmpty()) {
             System.out.println("Name the draft: ai gate TC-103");
@@ -124,6 +138,7 @@ public final class Cli {
         return report.passed() ? 0 : 1;
     }
 
+    /** Moves a passed draft into src/test with @AiDrafted and the reviewer's name. */
     private static int approve(List<String> args) {
         if (args.size() < 2) {
             System.out.println("Usage: ai approve TC-103 Your Name");
@@ -134,6 +149,7 @@ public final class Cli {
         return 0;
     }
 
+    /** Triages the failures of the last UI run and prints one line per verdict plus the report path. */
     private static int triage() {
         AiGateway ai = AiGateway.fromEnvironment();
         System.out.println("Model " + ai.model() + ", mode " + ai.modeDescription());
@@ -150,6 +166,7 @@ public final class Cli {
         return 0;
     }
 
+    /** Prints the commands and how the mode (live, replay, sample) is chosen. */
     private static int help() {
         System.out.println("""
                 Commands (run through ai.cmd on Windows or ./ai.sh elsewhere):

@@ -5,6 +5,10 @@
 const $ = (testId) => document.querySelector(`[data-testid="${testId}"]`);
 let me = null;
 
+/**
+ * Calls the API with the stored token and returns the JSON; an error status throws with the server's error text,
+ * which the callers show on the page.
+ */
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   const token = sessionStorage.getItem('token');
@@ -15,16 +19,19 @@ async function api(method, path, body) {
   return data;
 }
 
+/** Puts text into the element with this data-testid and makes it visible. */
 function show(testId, text) {
   const el = $(testId);
   el.textContent = text;
   el.hidden = false;
 }
 
+/** Hides the elements with these data-testids. */
 function hide(...testIds) {
   testIds.forEach((id) => { $(id).hidden = true; });
 }
 
+/** Login form submit: stores the token and opens the dashboard, or shows the error under the form. */
 async function login(event) {
   event.preventDefault();
   hide('login-error');
@@ -40,6 +47,7 @@ async function login(event) {
   }
 }
 
+/** Forgets the token and shows the login form again. */
 function logout() {
   sessionStorage.removeItem('token');
   me = null;
@@ -48,6 +56,10 @@ function logout() {
   hide('current-user', 'logout');
 }
 
+/**
+ * Loads the profile, switches to the dashboard, shows the name and role, hides the request form for managers, and
+ * renders the balance and the requests.
+ */
 async function loadDashboard() {
   me = await api('GET', '/api/me');
   $('login-view').hidden = true;
@@ -60,6 +72,10 @@ async function loadDashboard() {
   await renderRows();
 }
 
+/**
+ * Rebuilds the request table, one row per request with data-testids per id; managers get Approve / Reject on other
+ * people's pending requests, owners get Cancel on their own pending ones.
+ */
 async function renderRows() {
   const leaves = await api('GET', '/api/leaves');
   const tbody = $('leave-rows');
@@ -89,6 +105,7 @@ async function renderRows() {
   }
 }
 
+/** A table button with its data-testid and click handler. */
 function actionButton(label, testId, onClick) {
   const b = document.createElement('button');
   b.type = 'button';
@@ -98,11 +115,16 @@ function actionButton(label, testId, onClick) {
   return b;
 }
 
+/** Approve, reject or cancel one request, then reload the dashboard. */
 async function act(id, action) {
   await api('POST', `/api/leaves/${id}/${action}`);
   await loadDashboard();
 }
 
+/**
+ * Request form submit: creates the request, clears the form, reloads the dashboard and shows "Request #<id>
+ * submitted (<n> working days)"; a refused request shows the server's message instead.
+ */
 async function submitLeave(event) {
   event.preventDefault();
   hide('leave-error', 'leave-success');

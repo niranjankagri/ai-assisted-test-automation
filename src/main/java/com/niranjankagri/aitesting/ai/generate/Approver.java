@@ -23,6 +23,7 @@ public final class Approver {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
+    /** Static helpers only: no instances. */
     private Approver() {
     }
 

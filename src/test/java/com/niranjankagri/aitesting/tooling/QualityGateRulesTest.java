@@ -51,11 +51,13 @@ public class QualityGateRulesTest {
             }
             """;
 
+    /** The good draft passes every rule. */
     public void cleanDraftPassesEveryRule() {
         GateReport report = new GateReport(QualityGate.ruleChecks(TC_107, "UnpaidLeaveNeedsReasonTest", GOOD, TWO_LINES));
         assertTrue(report.passed(), report.failuresAsText());
     }
 
+    /** The good draft with one forbidden thing added each time, and the rule that must catch it. */
     @DataProvider
     public Object[][] badDrafts() {
         return new Object[][] {
@@ -80,6 +82,7 @@ public class QualityGateRulesTest {
         };
     }
 
+    /** Each broken draft fails the gate on exactly the expected rule. */
     @Test(dataProvider = "badDrafts")
     public void ruleCatchesIt(String what, String source, String expectedRule) {
         GateReport report = new GateReport(
@@ -89,6 +92,7 @@ public class QualityGateRulesTest {
                 what + ": expected rule '" + expectedRule + "' in\n" + report.failuresAsText());
     }
 
+    /** A coverage list shorter than the test case's expected results fails, with both counts in the message. */
     public void coverageMustListEveryExpectedResult() {
         GateReport report = new GateReport(QualityGate.ruleChecks(TC_107, "UnpaidLeaveNeedsReasonTest", GOOD,
                 List.of("only the error")));
@@ -97,11 +101,13 @@ public class QualityGateRulesTest {
                         + " in the answer");
     }
 
+    /** A class name that is not the one declared in the source fails. */
     public void classNameMustMatchTheSource() {
         GateReport report = new GateReport(QualityGate.ruleChecks(TC_107, "SomethingElseTest", GOOD, TWO_LINES));
         assertTrue(report.failuresAsText().contains("class name SomethingElseTest"));
     }
 
+    /** A failed rule quotes what it found, the line and the reason. */
     public void failedRuleSaysWhereAndWhy() {
         String bad = GOOD.replace("// Act", "Thread.sleep(2000);\n        // Act");
         String text = new GateReport(QualityGate.ruleChecks(TC_107, "UnpaidLeaveNeedsReasonTest", bad, TWO_LINES))

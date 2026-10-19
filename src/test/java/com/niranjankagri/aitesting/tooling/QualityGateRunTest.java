@@ -21,6 +21,7 @@ public class QualityGateRunTest {
 
     private static final List<String> TWO_LINES = List.of("error text asserted", "empty list asserted");
 
+    /** The good draft compiles and passes all three browser runs. */
     public void goodDraftCompilesAndPassesThreeRuns() {
         GateReport report = new QualityGate(Path.of("target", "gate-test", "good"))
                 .check(ProjectFiles.testCase("TC-107"), "UnpaidLeaveNeedsReasonTest", QualityGateRulesTest.GOOD,
@@ -29,6 +30,7 @@ public class QualityGateRunTest {
         assertEquals(report.checks().stream().filter(c -> c.stage().equals("run")).count(), QualityGate.RUNS);
     }
 
+    /** A compile error comes back with its line number, so a repair round knows where to look. */
     public void compileErrorsComeBackWithLineNumbers() {
         String broken = QualityGateRulesTest.GOOD.replace("dashboardPage.formError()", "dashboardPage.formErrorText()");
         GateReport report = new QualityGate(Path.of("target", "gate-test", "broken"))
@@ -38,6 +40,7 @@ public class QualityGateRunTest {
                 report.failuresAsText());
     }
 
+    /** A wrong expectation fails run 1 and the gate stops there instead of spending two more browser runs. */
     public void wrongExpectationFailsTheFirstRunAndStops() {
         String wrong = QualityGateRulesTest.GOOD.replace("Unpaid leave needs a reason", "Reason is required");
         GateReport report = new QualityGate(Path.of("target", "gate-test", "wrong"))

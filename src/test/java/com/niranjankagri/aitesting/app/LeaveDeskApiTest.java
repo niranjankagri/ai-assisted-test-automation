@@ -27,25 +27,30 @@ public class LeaveDeskApiTest {
     /** A response: status code plus parsed JSON body. */
     private record Reply(int status, JsonNode body) {}
 
+    /** One app on a free port for the whole class. */
     @BeforeClass
     public void startApp() throws IOException {
         app = LeaveDeskServer.start(0, false);
     }
 
+    /** Stops the app, also when a test failed. */
     @AfterClass(alwaysRun = true)
     public void stopApp() {
         app.close();
     }
 
+    /** Every test starts with an empty calendar. */
     @BeforeMethod
     public void resetData() throws Exception {
         call("POST", "/api/test/reset", null, null);
     }
 
+    /** The health endpoint answers {"status":"ok"}. */
     public void healthAnswersOk() throws Exception {
         assertEquals(call("GET", "/api/health", null, null).body().get("status").asText(), "ok");
     }
 
+    /** A correct login returns the role and a long random token. */
     public void loginReturnsTokenAndProfile() throws Exception {
         Reply r = call("POST", "/api/login", "{\"username\":\"maria\",\"password\":\"Leave-Test-1\"}", null);
         assertEquals(r.status(), 200);
@@ -53,17 +58,23 @@ public class LeaveDeskApiTest {
         assertTrue(r.body().get("token").asText().length() > 20);
     }
 
+    /** A wrong password is 401 with the message the UI shows. */
     public void wrongPasswordIs401() throws Exception {
         Reply r = call("POST", "/api/login", "{\"username\":\"alice\",\"password\":\"nope\"}", null);
         assertEquals(r.status(), 401);
         assertEquals(r.body().get("error").asText(), "Wrong username or password");
     }
 
+    /** No token and an unknown token are both 401. */
     public void leavesNeedAToken() throws Exception {
         assertEquals(call("GET", "/api/leaves", null, null).status(), 401);
         assertEquals(call("GET", "/api/leaves", null, "made-up-token").status(), 401);
     }
 
+    /**
+     * The main flow over HTTP: Alice files five days, her balance drops to 19, Maria approves, Alice sees
+     * APPROVED.
+     */
     public void createListApproveFlow() throws Exception {
         String alice = token("alice");
         Reply created = call("POST", "/api/leaves",
@@ -78,6 +89,7 @@ public class LeaveDeskApiTest {
         assertEquals(call("GET", "/api/leaves", null, alice).body().get(0).get("status").asText(), "APPROVED");
     }
 
+    /** A broken rule is a 400 whose error text names the rule. */
     public void ruleViolationsAre400WithAMessage() throws Exception {
         Reply r = call("POST", "/api/leaves", "{\"type\":\"UNPAID\",\"from\":\"2026-11-02\",\"to\":\"2026-11-02\"}",
                 token("alice"));
@@ -85,6 +97,7 @@ public class LeaveDeskApiTest {
         assertEquals(r.body().get("error").asText(), "Unpaid leave needs a reason");
     }
 
+    /** Invalid JSON, an unknown type and a wrong date format are 400 with a helpful message, never a 500. */
     public void badInputIs400NotAServerError() throws Exception {
         String alice = token("alice");
         assertEquals(call("POST", "/api/leaves", "{not json", alice).status(), 400);
@@ -94,6 +107,7 @@ public class LeaveDeskApiTest {
                 alice).body().get("error").asText(), "The start date must look like 2026-11-30");
     }
 
+    /** An employee approving a request gets 403. */
     public void employeeCannotApprove() throws Exception {
         String alice = token("alice");
         int id = call("POST", "/api/leaves", "{\"type\":\"SICK\",\"from\":\"2026-11-02\",\"to\":\"2026-11-02\"}", alice)
@@ -101,6 +115,7 @@ public class LeaveDeskApiTest {
         assertEquals(call("POST", "/api/leaves/" + id + "/approve", null, token("bob")).status(), 403);
     }
 
+    /** The start page is served, but a path that tries to leave the web folder is 404. */
     public void servesTheUiButNoOtherFiles() throws Exception {
         HttpResponse<String> page = http.send(HttpRequest.newBuilder(URI.create(app.baseUrl() + "/")).build(),
                 HttpResponse.BodyHandlers.ofString());
@@ -112,11 +127,13 @@ public class LeaveDeskApiTest {
         assertEquals(sneaky.statusCode(), 404);
     }
 
+    /** Logs a demo user in and returns the token. */
     private String token(String user) throws Exception {
         return call("POST", "/api/login", "{\"username\":\"" + user + "\",\"password\":\"Leave-Test-1\"}", null)
                 .body().get("token").asText();
     }
 
+    /** Sends one JSON request (with the token when given) and returns status and parsed body. */
     private Reply call(String method, String path, String body, String token) throws Exception {
         HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(app.baseUrl() + path))
                 .method(method, body == null ? HttpRequest.BodyPublishers.noBody()

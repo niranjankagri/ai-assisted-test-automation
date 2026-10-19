@@ -24,7 +24,9 @@ public record TriageVerdict(
         @JsonPropertyDescription("Bug ticket in Markdown when the category is PRODUCT_BUG, otherwise an empty string")
         String bugReportMarkdown) {
 
+    /** The possible causes; NEEDS_HUMAN is the honest answer when the evidence does not decide. */
     public enum Category { PRODUCT_BUG, TEST_BUG, ENVIRONMENT, FLAKY_OR_TIMING, NEEDS_HUMAN }
 
+    /** How strongly the evidence supports the category. */
     public enum Confidence { HIGH, MEDIUM, LOW }
 }

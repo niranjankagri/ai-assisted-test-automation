@@ -74,10 +74,12 @@ public final class QualityGate {
         this.workRoot = workRoot;
     }
 
+    /** A rule the draft must match (multi-line regex). */
     private static Rule must(String name, String regex, String why) {
         return new Rule(name, Pattern.compile(regex, Pattern.MULTILINE), true, why);
     }
 
+    /** A rule the draft must not match (multi-line regex). */
     private static Rule never(String name, String regex, String why) {
         return new Rule(name, Pattern.compile(regex, Pattern.MULTILINE), false, why);
     }
@@ -214,10 +216,12 @@ public final class QualityGate {
         }
     }
 
+    /** 1-based line number of a character offset, so a failed rule can say where it found the problem. */
     private static int lineOf(String text, int offset) {
         return (int) text.substring(0, offset).chars().filter(c -> c == '\n').count() + 1;
     }
 
+    /** The first n lines of a stack trace: enough to see the failure without flooding the report. */
     private static String firstLines(String text, int n) {
         return String.join("\n", text.lines().limit(n).toList());
     }

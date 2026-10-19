@@ -8,6 +8,7 @@ public class LoginPage {
 
     private final Page page;
 
+    /** Wraps the page of the running test. */
     public LoginPage(Page page) {
         this.page = page;
     }

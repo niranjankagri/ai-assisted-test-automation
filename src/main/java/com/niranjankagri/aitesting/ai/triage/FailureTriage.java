@@ -39,6 +39,7 @@ public final class FailureTriage {
     private final AiGateway ai;
     private final Path evidenceRoot;
 
+    /** evidenceRoot is where the UI run left its evidence, normally target/test-evidence. */
     public FailureTriage(AiGateway ai, Path evidenceRoot) {
         this.ai = ai;
         this.evidenceRoot = evidenceRoot;
@@ -55,6 +56,7 @@ public final class FailureTriage {
         return results;
     }
 
+    /** The evidence folders that hold a failure.json, sorted so the report order is stable. */
     private List<Path> failureFolders() {
         if (!Files.isDirectory(evidenceRoot)) {
             return List.of();
@@ -66,6 +68,11 @@ public final class FailureTriage {
         }
     }
 
+    /**
+     * Triages one failure: builds the message from the test case, the test's source, the page objects, the error,
+     * the console, the trimmed HTML and the screenshot, asks for a verdict and saves it as JSON. The recording key
+     * leaves out what changes between runs (screenshot, ports, retry counts).
+     */
     Triaged triage(Path folder) {
         try {
             JsonNode failure = JSON.readTree(folder.resolve("failure.json").toFile());
@@ -119,11 +126,19 @@ public final class FailureTriage {
                 .replaceAll("\\d+ms", "Nms");
     }
 
+    /**
+     * The page HTML without scripts and styles, cut at MAX_HTML_CHARS: enough to see the page state at a fraction
+     * of the cost.
+     */
     static String trimHtml(String html) {
         String clean = html.replaceAll("(?is)<script.*?</script>", "").replaceAll("(?is)<style.*?</style>", "");
         return clean.length() <= MAX_HTML_CHARS ? clean : clean.substring(0, MAX_HTML_CHARS) + "\n... (cut)";
     }
 
+    /**
+     * Writes target/ai-triage/triage.md: the sample banner when any verdict is a sample, a summary table, then per
+     * failure the verdict, its evidence, the next step and the draft bug ticket.
+     */
     private void writeReport(List<Triaged> results) {
         StringBuilder md = new StringBuilder("# AI failure triage\n\n");
         if (results.stream().anyMatch(Triaged::sample)) {

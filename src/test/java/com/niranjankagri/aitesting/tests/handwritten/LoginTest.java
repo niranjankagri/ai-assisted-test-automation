@@ -13,6 +13,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  */
 public class LoginTest extends BaseUiTest {
 
+    /** TC-101: after login the dashboard shows the name, the role, the full 24 days and an empty request list. */
     @Test(groups = "ui")
     @TestCase("TC-101")
     public void employeeLogsInAndSeesTheirBalance() {
@@ -29,6 +30,7 @@ public class LoginTest extends BaseUiTest {
         assertThat(dashboardPage.emptyListMessage()).isVisible();
     }
 
+    /** TC-102: a wrong password shows the error and stays on the login form. */
     @Test(groups = "ui")
     @TestCase("TC-102")
     public void wrongPasswordShowsAnErrorAndStaysOnTheLoginForm() {

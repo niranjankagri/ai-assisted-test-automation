@@ -42,6 +42,10 @@ public class FailureEvidenceListener implements ITestListener {
         }
     }
 
+    /**
+     * Saves what the triage step needs for a failed UI test: full-page screenshot, page HTML and failure.json
+     * (test case, test, AI-drafted or not, error, stack, URL, console).
+     */
     @Override
     public void onTestFailure(ITestResult result) {
         if (!(result.getInstance() instanceof BaseUiTest test) || test.page() == null) {
