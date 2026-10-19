@@ -11,8 +11,11 @@ Everything is Java: the demo app, the AI tooling (official [Anthropic Java SDK](
 and the tests (Playwright for Java + TestNG).
 
 > **Status:** the app, the framework, the generator, the quality gate, the approve step, the triage step,
-> their tests and CI are complete. The first live generation run (TC-103 to TC-108) and the triage demo
-> recording are still to do; until then the CI jobs `ai-replay` and `triage-demo` skip themselves.
+> their tests and CI are complete. **No answer in this repository comes from Claude yet.** To show the
+> pipeline without an API key, `ai/samples/` holds **hand-written sample answers** for TC-103, TC-104 and the
+> planted-bug triage; the CI job `samples` runs the real gate, browser runs and triage report on them, and every
+> report built from a sample says so at the top. The first live run (TC-103 to TC-108) and its recordings are
+> still to do; until then the CI jobs `ai-replay` and `triage-demo` skip themselves.
 
 ## The idea in one picture
 
@@ -54,7 +57,8 @@ checks it, and nothing reaches `src/test` without a named reviewer.
 | Demo app **LeaveDesk** | `src/main/java/.../app`, `src/main/resources/web` | Leave requests: working-day counting, annual balance, overlap rule, 20-day limit, unpaid needs a reason, manager approval. JDK `HttpServer` + plain JS UI with `data-testid`s. A switch plants an overlap bug for the triage demo. |
 | Test framework | `src/test/java/.../framework` | `BaseUiTest` (app in the test JVM, fresh browser context and data reset per test, trace kept on failure), page objects, `FailureEvidenceListener`, `@TestCase`, `@AiDrafted`. |
 | Test cases | `test-cases/TC-101..108.md` | Plain-language cases. TC-101/102 are automated by hand (`tests/handwritten/LoginTest.java`, the style reference for Claude). |
-| AI gateway | `ai/AiGateway.java` | The only class that calls Claude. Live mode records every answer under `ai/recordings/`; replay mode answers from recordings (CI, no key). Typed answers via structured outputs, cached system prompt, refusal fallback, token and cost log. |
+| AI gateway | `ai/AiGateway.java` | The only class that calls Claude. Live mode records every answer under `ai/recordings/`; replay mode answers from recordings (CI, no key); sample mode answers from the hand-written `ai/samples/`. Typed answers via structured outputs, cached system prompt, refusal fallback, token and cost log. |
+| Sample answers | `ai/samples/generate`, `ai/samples/triage` | Written by a person in the shape of Claude's answers, each file marked as such. TC-104's first sample draft breaks a gate rule on purpose so the repair round shows. Never approved into `src/test`. |
 | Generator | `ai/generate` | Draft → gate → repair rounds → `ai-drafts/<id>/` with `review.md`. |
 | Quality gate | `ai/gate/QualityGate.java` | Rules, in-process `javac`, three TestNG runs, each with its own evidence folder. |
 | Approve | `ai/generate/Approver.java` | Gate-passed drafts only; re-checks the rules after reviewer edits; adds `@AiDrafted`. |
@@ -86,6 +90,7 @@ mvnw.cmd -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dex
 | Approve a draft | `ai approve TC-103 Your Name` |
 | Triage the last UI run | `ai triage` |
 | Planted-bug demo | `mvnw.cmd test -Dsuite=ui -Dleavedesk.bug=true` then `ai triage` |
+| Whole pipeline on the sample answers (no key) | `set AI_MODE=sample` then `ai generate TC-103 TC-104` (see the CI job `samples` for the triage part) |
 
 On macOS/Linux use `./mvnw` and `./ai.sh`.
 
@@ -95,6 +100,11 @@ answers for free. A recording is keyed on the model, the prompt, the test case a
 context; change any of them and replay says which recording to refresh. `AI_MODE=replay` forces replay;
 `AI_MODEL` switches the model (default `claude-opus-5-5`). Each live call prints its tokens and cost, and appends
 them to `target/ai-usage.csv`.
+
+**Sample mode.** `AI_MODE=sample` answers from `ai/samples/` instead: answers a person wrote by hand, so the gate,
+the repair loop, the review page and the triage report can be seen without a key. They prove the plumbing, not the
+model: `review.md` and `triage.md` open with a "Sample answer, not from Claude" banner, `draft.json` says
+`"source": "sample"`, and `ai approve` refuses sample drafts, so nothing hand-written is ever marked `@AiDrafted`.
 
 ## The quality gate rules
 
@@ -117,10 +127,11 @@ named step.
 
 | Job | What |
 |---|---|
-| App + AI tooling tests | 48 tests: app rules and API, every gate rule, real gate runs on hand-made drafts, replay, approve marking |
+| App + AI tooling tests | 52 tests: app rules and API, every gate rule, real gate runs on hand-made drafts, replay, sample mode, approve marking and its refusal of samples |
 | UI tests ×3 | Chromium, Firefox, WebKit; evidence uploaded on failure |
 | AI drafts replayed | regenerates every approved AI test from its recording and gates it again (skips until recordings exist) |
 | AI triage demo | planted overlap bug → the overlap test fails → replayed triage must say `PRODUCT_BUG` (skips until recorded) |
+| Pipeline on hand-written sample answers | gates the TC-103/TC-104 samples (TC-104 needs one repair round), runs the TC-104 sample test against the planted bug for this job only, triages the real failure with the sample verdict; review pages and triage report go to the job summary |
 
 No CI job needs an API key.
 
@@ -151,6 +162,7 @@ The design reasoning is in [docs/framework-design.md](docs/framework-design.md).
 - One small demo app; a real product needs a larger page-object surface and a way to keep the context size in check.
 - Triage sees one failure at a time; it does not correlate failures across tests or runs.
 - Recordings make CI deterministic, but they show what the model answered on the recording day, not today.
+- The sample answers say nothing about how well Claude drafts or triages; only live runs and their recordings do.
 
 ## License
 
