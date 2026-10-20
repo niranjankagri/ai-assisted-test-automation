@@ -31,6 +31,16 @@ jobs:
         run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium"
       - name: Unit suite (app rules, API, gate rules, gate runs, gateway replay)
         run: ./mvnw -B test
+      # JUnit XML only, as its own artifact: the CI results collection of
+      # automation-coverage-quality-intelligence imports it (config/producers.toml there)
+      - name: Keep the JUnit results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-unit
+          path: target/surefire-reports/TEST-*.xml
+          if-no-files-found: warn
+          retention-days: 30
 
   ui:
     name: UI tests (${{ matrix.browser }})
@@ -50,6 +60,16 @@ jobs:
         run: ./mvnw -B -q compile exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps ${{ matrix.browser }}"
       - name: Hand-written and approved AI-drafted tests
         run: ./mvnw -B test -Dsuite=ui -Dbrowser=${{ matrix.browser }}
+      # JUnit XML only, as its own artifact: the CI results collection of
+      # automation-coverage-quality-intelligence imports it (config/producers.toml there)
+      - name: Keep the JUnit results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-ui-${{ matrix.browser }}
+          path: target/surefire-reports/TEST-*.xml
+          if-no-files-found: warn
+          retention-days: 30
       - name: Keep the evidence of failed tests
         if: failure()
         uses: actions/upload-artifact@v7
