@@ -133,7 +133,10 @@ named step.
 | AI triage demo | planted overlap bug → the overlap test fails → replayed triage must say `PRODUCT_BUG` (skips until recorded) |
 | Pipeline on hand-written sample answers | gates the TC-103/TC-104 samples (TC-104 needs one repair round), runs the TC-104 sample test against the planted bug for this job only, triages the real failure with the sample verdict; review pages and triage report go to the job summary |
 
-No CI job needs an API key.
+No CI job needs an API key. The JUnit XML goes into its own artifacts (`junit-unit`, `junit-ui-<browser>`), which
+[Automation Coverage & Quality Intelligence](https://github.com/niranjankagri/automation-coverage-quality-intelligence) collects.
+
+`main` is protected by a ruleset: every change goes through a pull request, and the CI jobs above must pass before it is merged.
 
 ## Design notes
 
@@ -166,4 +169,4 @@ The design reasoning is in [docs/framework-design.md](docs/framework-design.md).
 
 ## License
 
-MIT
+[MIT](LICENSE)
