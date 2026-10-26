@@ -10,6 +10,11 @@ updates:
     groups:
       maven-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # Surefire 3.6 removed suiteXmlFiles, which runs this project's TestNG suites
+      # (PR #3 failed: "Parameter suiteXmlFiles is not supported since 3.6.0")
+      - dependency-name: org.apache.maven.plugins:maven-surefire-plugin
+        versions: [">= 3.6.0"]
 
   - package-ecosystem: github-actions
     directory: "/"
