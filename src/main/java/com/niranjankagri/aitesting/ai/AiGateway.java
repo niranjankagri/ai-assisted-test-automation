@@ -246,9 +246,9 @@ public final class AiGateway {
         for (Turn turn : request.turns()) {
             List<ContentBlockParam> blocks = turn.parts().stream().map(AiGateway::toBlock).toList();
             if (turn.fromUser()) {
-                params.addUserMessageOfBlockParams(blocks);
+                params.addUserMessageOfContentBlockParams(blocks);
             } else {
-                params.addAssistantMessageOfBlockParams(blocks);
+                params.addAssistantMessageOfContentBlockParams(blocks);
             }
         }
         return params.build();
