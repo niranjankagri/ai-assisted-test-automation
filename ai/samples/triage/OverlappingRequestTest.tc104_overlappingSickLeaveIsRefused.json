@@ -1,7 +1,7 @@
 {
   "_note": "Hand-written sample answer, NOT produced by Claude. A person wrote it from the evidence of a real run against LeaveDesk started with -Dleavedesk.bug=true, in the shape Claude's triage returns, so the triage report can be shown without an API key.",
   "purpose": "triage",
-  "label": "OverlappingRequestTest.overlappingSickLeaveIsRefused",
+  "label": "OverlappingRequestTest.tc104_overlappingSickLeaveIsRefused",
   "writtenBy": "a person (sample)",
   "answer": {
     "category": "PRODUCT_BUG",
@@ -15,6 +15,6 @@
       "Browser console is empty: no script error on the page"
     ],
     "nextStep": "Raise a bug for the overlap check in leave request validation and keep this test failing until it is fixed. No change to the test is needed.",
-    "bugReportMarkdown": "**Title:** Overlapping leave request is accepted\n\n**Steps:** sign in as alice; request ANNUAL 2026-11-02 to 2026-11-06; request SICK 2026-11-05 to 2026-11-09.\n\n**Expected:** the second request is refused with \"These dates overlap another request\"; one request in the table (TC-104).\n\n**Actual:** \"Request #2 submitted (3 working days)\"; two PENDING requests for the same days.\n\n**Evidence:** test OverlappingRequestTest.overlappingSickLeaveIsRefused, screenshot, page HTML and trace in the CI artifact.\n\n**Severity:** high: an employee can book the same days twice."
+    "bugReportMarkdown": "**Title:** Overlapping leave request is accepted\n\n**Steps:** sign in as alice; request ANNUAL 2026-11-02 to 2026-11-06; request SICK 2026-11-05 to 2026-11-09.\n\n**Expected:** the second request is refused with \"These dates overlap another request\"; one request in the table (TC-104).\n\n**Actual:** \"Request #2 submitted (3 working days)\"; two PENDING requests for the same days.\n\n**Evidence:** test OverlappingRequestTest.tc104_overlappingSickLeaveIsRefused, screenshot, page HTML and trace in the CI artifact.\n\n**Severity:** high: an employee can book the same days twice."
   }
 }

@@ -16,7 +16,7 @@ public class LoginTest extends BaseUiTest {
     /** TC-101: after login the dashboard shows the name, the role, the full 24 days and an empty request list. */
     @Test(groups = "ui")
     @TestCase("TC-101")
-    public void employeeLogsInAndSeesTheirBalance() {
+    public void tc101_employeeLogsInAndSeesTheirBalance() {
         // Arrange: start page
         loginPage.open();
 
@@ -33,7 +33,7 @@ public class LoginTest extends BaseUiTest {
     /** TC-102: a wrong password shows the error and stays on the login form. */
     @Test(groups = "ui")
     @TestCase("TC-102")
-    public void wrongPasswordShowsAnErrorAndStaysOnTheLoginForm() {
+    public void tc102_wrongPasswordShowsAnErrorAndStaysOnTheLoginForm() {
         loginPage.open();
 
         loginPage.loginAs(TestUsers.EMPLOYEE, "not-the-password");

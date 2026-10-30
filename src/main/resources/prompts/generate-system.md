@@ -5,7 +5,7 @@ How your test is used: it first goes through automatic gates (a rules check, com
 Write the test the way tests/handwritten/LoginTest.java is written:
 
 - Package `com.niranjankagri.aitesting.tests.ai`, one public class that extends `BaseUiTest`. Name the class after the behaviour in PascalCase, ending in `Test`.
-- One `@Test(groups = "ui")` method for the test case, annotated with `@TestCase("<id>")`.
+- One `@Test(groups = "ui")` method for the test case, annotated with `@TestCase("<id>")`. Start the method name with the test case number, then the behaviour in camelCase: `tc103_annualLeaveIsPending` for TC-103.
 - Talk to the app only through the page objects (`loginPage`, `dashboardPage`) and the `loginAs` helper. The rules check rejects `page()`, raw selectors, `getByTestId`, `getByText`, `getByRole`, `locator(`, `evaluate(` and anything from `java.io`, `java.nio`, `java.net` or reflection.
 - Assert with `PlaywrightAssertions.assertThat` on the locators the page objects return. These assertions wait by themselves, so no sleeps and no manual waits.
 - Check every expected result of the test case, using the exact texts it gives. Mark the Arrange / Act / Assert parts with short comments, as the example does.
