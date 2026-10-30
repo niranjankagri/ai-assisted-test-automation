@@ -184,7 +184,7 @@ jobs:
       - name: UI suite against the app with the planted overlap bug (one failure expected)
         run: ./mvnw -B test -Dsuite=ui -Dleavedesk.bug=true || echo "Failure expected (the bug is planted)"
       - name: The failure was really captured
-        run: test -f target/test-evidence/OverlappingRequestTest.overlappingSickLeaveIsRefused/failure.json
+        run: test -f target/test-evidence/OverlappingRequestTest.tc104_overlappingSickLeaveIsRefused/failure.json
       - name: Triage with the sample verdict
         run: ./ai.sh triage
       - name: Review pages and triage report to the job summary
