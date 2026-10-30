@@ -50,6 +50,12 @@ failure is a test that *passes and checks the wrong thing*. So the gate rejects 
 don't compile or are not stable, the review file puts each expected result of the test case next to the line that
 checks it, and nothing reaches `src/test` without a named reviewer.
 
+What the pipeline hands to people, from the CI job `samples` (hand-written sample answers, so both pages say so at the top; the gate, the browser runs and the reports are real):
+
+| Review page of a draft (`ai-drafts/TC-104/review.md`) | Triage of the failing test (`target/ai-triage/triage.md`) |
+|---|---|
+| ![Review page for TC-104: checklist, how each expected result is asserted, assumptions; quality gate passed after 2 rounds](docs/images/review-page.png) | ![AI failure triage: TC-104 is a PRODUCT_BUG with high confidence, with the evidence and the next step](docs/images/triage-report.png) |
+
 ## What is in the repo
 
 | Part | Where | What it does |
